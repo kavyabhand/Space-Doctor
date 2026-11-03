@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="utf-8">
+<title>Space Doctor</title>
+<meta name="description" content="Beam, Reflection AI's open 501B model, diagnoses and repairs broken Hugging Face Spaces. Every revival is rebuilt and its API is called before it counts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: a research release. One reading column (~680px); figures break out to 1160px.
+     Porcelain / ink ground. Cyan is reserved for Spaces that work again, coral for Spaces that are broken. */
+  :root {
+    --bg: #f7f8fa; --surface: #ffffff; --sunk: #eef0f4; --line: #e2e5eb;
+    --fg: #14171c; --fg-2: #555c68; --fg-3: #9198a4;
+    --beam: #0a8fb3; --beam-soft: #e1f3f8; --rose: #e0604d; --rose-soft: #fbe9e5; --dot: 120, 128, 142;
+    --term: #0d1015; --term-line: #1f242d; --term-fg: #d7dce4; --term-dim: #6b7380; --term-ok: #7fd3ee; --term-bad: #ff8f80; --term-beam: #f0c674;
+    --display: "Newsreader", "Iowan Old Style", Georgia, serif;
+    --sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --read: 680px; --wide: 1160px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c0e12; --surface: #12151b; --sunk: #181c23; --line: #232832;
+      --fg: #eef0f4; --fg-2: #a5acb8; --fg-3: #69707d;
+      --beam: #5fd2f0; --beam-soft: #0f2730; --rose: #ff8573; --rose-soft: #2c1714; --dot: 150, 158, 172;
+      --term: #080a0e; --term-line: #20252e;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c0e12; --surface: #12151b; --sunk: #181c23; --line: #232832;
+    --fg: #eef0f4; --fg-2: #a5acb8; --fg-3: #69707d;
+    --beam: #5fd2f0; --beam-soft: #0f2730; --rose: #ff8573; --rose-soft: #2c1714; --dot: 150, 158, 172;
+    --term: #080a0e; --term-line: #20252e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 400 17px/1.65 var(--sans);
+         padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+         -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration-color: var(--fg-3); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--fg); }
+  a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--beam); outline-offset: 3px; border-radius: 4px; }
+  .read { max-width: var(--read); margin: 0 auto; }
+  .wide { max-width: var(--wide); margin: 0 auto; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 300; letter-spacing: -0.015em; text-wrap: balance; margin: 0; }
+  h2 { font-size: clamp(30px, 4.2vw, 42px); line-height: 1.12; }
+  h3 { font-size: 22px; font-weight: 400; line-height: 1.25; }
+  p { margin: 0; }
+  .label { font: 500 11.5px/1.3 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); }
+  code { font: 0.86em var(--mono); background: var(--sunk); padding: 1px 5px; border-radius: 4px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--fg-3); }
+
+  /* Masthead */
+  .mast { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-block: 22px; border-bottom: 1px solid var(--line); }
+  .mark { display: flex; align-items: center; gap: 10px; font: 500 14px var(--sans); letter-spacing: -0.01em; }
+  .mark svg { width: 22px; height: 22px; color: var(--beam); }
+  .mast nav { display: flex; gap: 22px; font-size: 14px; color: var(--fg-2); }
+  .mast nav a { text-decoration: none; }
+  .mast nav a:hover { color: var(--fg); }
+  @media (max-width: 680px) { .mast nav { display: none; } }
+
+  /* Hero */
+  .hero { padding-block: clamp(48px, 9vw, 104px) 44px; display: grid; gap: 26px; justify-items: center; text-align: center; }
+  .hero h1 { font-size: clamp(40px, 7.2vw, 96px); line-height: 1.02; letter-spacing: -0.03em; }
+  .hero h1 .nowrap { display: inline-block; }
+  @media (max-width: 560px) { .hero h1 .nowrap { display: inline; } }
+  .hero h1 em { font-style: italic; color: var(--beam); }
+  .lede { font-size: clamp(18px, 2vw, 21px); line-height: 1.55; color: var(--fg-2); max-width: 46ch; }
+  .byline { font-size: 15px; color: var(--fg-2); }
+  .byline a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--line); }
+  .byline a:hover { border-color: var(--fg-3); }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; font: 500 14px var(--sans); text-decoration: none; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); color: var(--fg); background: var(--surface); }
+  .btn:hover { border-color: var(--fg-3); }
+  .btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+  /* Figure 1: the field */
+  figure { margin: 0; }
+  .field-wrap { position: relative; }
+  #field { display: block; width: 100%; max-width: 100%; cursor: crosshair; }
+  .tip { position: absolute; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 12px 32px rgba(0,0,0,0.18); max-width: 280px; z-index: 2; }
+  .tip b { display: block; font-weight: 600; word-break: break-word; }
+  .tip .st { font: 500 11px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
+  figcaption { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 18px; margin-top: 16px; font-size: 14px; color: var(--fg-2); line-height: 1.55; }
+  figcaption .label { padding-top: 2px; }
+  @media (max-width: 640px) { figcaption { grid-template-columns: 1fr; } }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; color: var(--fg-2); margin-top: 16px; }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+
+  /* Headline numbers */
+  .figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; padding-block: 48px 8px; }
+  .fig-n { font: 300 clamp(38px, 5vw, 60px)/1 var(--display); letter-spacing: -0.02em; font-variant-numeric: lining-nums tabular-nums; }
+  .fig-n.rose { color: var(--rose); } .fig-n.beam { color: var(--beam); }
+  .fig-l { font-size: 14px; color: var(--fg-2); margin-top: 10px; max-width: 26ch; }
+  @media (max-width: 820px) { .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  /* Sections */
+  section { padding-block: clamp(64px, 9vw, 112px) 0; }
+  .sec-head { display: grid; gap: 14px; margin-bottom: 30px; }
+  .prose { display: grid; gap: 18px; color: var(--fg-2); }
+  p.prose { display: block; }
+
+  /* Revivals */
+  .rev { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 18px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+  .life { display: block; width: 100%; height: 46px; border-bottom: 1px solid var(--line); }
+  .life .flat { stroke: var(--rose); }
+  .life .beat { stroke: var(--beam); }
+  .life .run { animation: drift 2.2s linear infinite; }
+  @keyframes drift { to { transform: translateX(-80px); } }
+  .card-top { padding: 16px 18px 12px; display: grid; gap: 4px; }
+  .card-name { font-weight: 600; font-size: 15.5px; word-break: break-word; }
+  .card-name a { text-decoration: none; }
+  .card-name a:hover { text-decoration: underline; }
+  .card-sub { font: 12.5px var(--mono); color: var(--fg-3); }
+  .was { padding: 12px 18px 14px; border-top: 1px solid var(--line); background: var(--rose-soft); }
+  .was pre { margin: 6px 0 0; font: 12px/1.5 var(--mono); color: var(--rose); white-space: pre-wrap; word-break: break-word; max-height: 4.5em; overflow: hidden; }
+  .now { padding: 14px 18px 16px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .chip { font: 500 11px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--line); }
+  .chip.dead { color: var(--rose); background: var(--rose-soft); }
+  .chip.live { color: var(--beam); background: var(--beam-soft); }
+  .chip.grey { color: var(--fg-2); background: var(--sunk); }
+  .media { width: 100%; max-width: 100%; border-radius: 10px; background: var(--sunk); display: block; max-height: 280px; object-fit: contain; }
+  audio.media { height: 42px; background: transparent; }
+  .out { margin: 0; font: 13px/1.55 var(--mono); background: var(--sunk); border-radius: 10px; padding: 12px; white-space: pre-wrap; word-break: break-word; max-height: 9.5em; overflow: auto; }
+  .note { font-size: 12.5px; color: var(--fg-3); }
+  .diag { padding: 14px 18px; border-top: 1px solid var(--line); font-size: 14px; color: var(--fg-2); line-height: 1.55; }
+  .foot { margin-top: auto; padding: 12px 18px 16px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--fg-3); }
+  .add { color: var(--beam); } .del { color: var(--rose); }
+  .empty { color: var(--fg-3); font-size: 15px; padding: 28px; border: 1px dashed var(--line); border-radius: 14px; text-align: center; }
+
+  /* Revival tiles: a compact grid; a tap opens the full card in a dialog */
+  .tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 1080px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (max-width: 820px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+  .tile { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; transition: border-color .15s, transform .15s, box-shadow .15s; }
+  .tile:hover { border-color: var(--beam); transform: translateY(-2px); box-shadow: 0 12px 28px -18px rgba(0,0,0,.45); }
+  .tile:focus-visible { outline: 2px solid var(--beam); outline-offset: 2px; }
+  .tile .life { height: 20px; }
+  .thumb { aspect-ratio: 16 / 10; background: var(--sunk); display: grid; place-items: center; overflow: hidden; position: relative; }
+  .thumb img, .thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .txt { padding: 9px 11px; font: 11px/1.45 var(--mono); color: var(--fg-2); align-self: stretch; justify-self: stretch; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; word-break: break-word; }
+  .thumb .kind { position: absolute; left: 8px; bottom: 8px; font: 500 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-2); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 7px; }
+  .thumb svg.wave { width: 70%; height: 46%; color: var(--beam); }
+  .tile-b { padding: 8px 11px 10px; display: grid; gap: 3px; }
+  .tile-n { font-weight: 600; font-size: 13.5px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile-o { font: 11.5px var(--mono); color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile-m { display: flex; justify-content: space-between; align-items: center; gap: 6px; font: 11.5px var(--mono); color: var(--fg-3); }
+  .tile-m .chip { font-size: 9.5px; padding: 2px 7px; }
+  .more { display: flex; justify-content: center; margin-top: 18px; }
+  dialog.case-dlg { border: 0; padding: 0; background: transparent; max-width: min(640px, calc(100vw - 32px)); width: 100%; max-height: calc(100vh - 48px); color: var(--fg); }
+  dialog.case-dlg::backdrop { background: rgba(8, 10, 14, .62); backdrop-filter: blur(3px); }
+  dialog.case-dlg .card { max-height: calc(100vh - 48px); overflow: auto; box-shadow: 0 40px 80px -30px rgba(0,0,0,.6); }
+  .dlg-x { position: sticky; top: 0; display: flex; justify-content: flex-end; padding: 10px 10px 0; background: var(--surface); z-index: 1; }
+  .dlg-x button { font: 500 13px var(--sans); border: 1px solid var(--line); background: var(--surface); color: var(--fg-2); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+
+  /* Method: steps */
+  .steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+  .step { padding: 20px 20px 4px 0; display: grid; gap: 8px; align-content: start; }
+  .step + .step { padding-left: 20px; border-left: 1px solid var(--line); }
+  .step .label { color: var(--beam); }
+  .step b { font-weight: 600; font-size: 15px; }
+  .step span:last-child { font-size: 14px; color: var(--fg-2); line-height: 1.55; }
+  @media (max-width: 900px) { .steps { grid-template-columns: 1fr; } .step, .step + .step { padding: 18px 0; border-left: 0; border-bottom: 1px solid var(--line); } }
+
+  /* Figure 3: flow ribbons */
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: clamp(16px, 3vw, 28px); min-width: 0; }
+  .flow-wrap { overflow-x: auto; }
+  .flow-wrap svg { width: 100%; min-width: 700px; height: auto; display: block; }
+  .fig-block { margin-top: 44px; }
+
+  /* Figure 4: terminal replay (a device: dark in both themes) */
+  .term { background: var(--term); border-radius: 16px; border: 1px solid var(--term-line); box-shadow: 0 30px 60px -36px rgba(0,0,0,.55); overflow: hidden; min-width: 0; }
+  .term-h { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--term-line); font: 400 12px var(--mono); color: var(--term-dim); }
+  .term-h i { width: 10px; height: 10px; border-radius: 50%; background: var(--term-line); flex: none; }
+  .term-h span { margin-left: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .term-h button { margin-left: auto; flex: none; font: 400 12px var(--mono); color: var(--term-dim); background: none; border: 1px solid var(--term-line); border-radius: 7px; padding: 4px 10px; cursor: pointer; }
+  .term-h button:hover { color: var(--term-fg); }
+  .term pre { margin: 0; padding: 18px 20px 20px; font: 400 12.5px/1.75 var(--mono); color: var(--term-fg); white-space: pre-wrap; word-break: break-word; min-height: 380px; transition: opacity .3s; }
+  .term .d { color: var(--term-dim); } .term .ok { color: var(--term-ok); } .term .bad { color: var(--term-bad); } .term .bm { color: var(--term-beam); }
+
+  /* Figure 5: cause bubbles */
+  .bubbles { display: flex; flex-wrap: wrap; gap: 22px 12px; align-items: flex-end; justify-content: center; }
+  .bub { display: grid; justify-items: center; gap: 10px; width: 124px; text-align: center; }
+  .bub i { border-radius: 50%; display: grid; place-items: center; font: 500 13px var(--mono); font-style: normal; }
+  .bub i.fix { background: var(--beam-soft); color: var(--beam); box-shadow: inset 0 0 0 1.5px var(--beam); }
+  .bub i.plat { background: var(--sunk); color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line); }
+  .bub i.catch { background: repeating-linear-gradient(135deg, var(--rose-soft) 0 4px, transparent 4px 8px); color: var(--rose); box-shadow: inset 0 0 0 1.5px var(--rose); }
+  .bub span { font-size: 12.5px; color: var(--fg-2); line-height: 1.35; }
+  .key { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; font-size: 13px; color: var(--fg-2); margin-top: 26px; }
+  .key span::before { content: ""; display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 8px; vertical-align: -1px; background: var(--beam-soft); box-shadow: inset 0 0 0 1.5px var(--beam); }
+  .key .p::before { background: var(--sunk); box-shadow: inset 0 0 0 1px var(--fg-3); }
+  .key .c::before { background: var(--rose-soft); box-shadow: inset 0 0 0 1.5px var(--rose); }
+  .coverage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+  .coverage > div { background: var(--sunk); border-radius: 14px; padding: 18px 20px; display: grid; gap: 6px; }
+  .coverage .fig-n { font-size: clamp(36px, 4vw, 48px); }
+  .coverage .fig-l { margin: 0; max-width: none; }
+  .coverage .strike { text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: var(--rose); color: var(--fg-3); }
+  @media (max-width: 640px) { .coverage { grid-template-columns: 1fr; } }
+
+  /* Figure 6: baseline */
+  .vs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .vs > div { background: var(--surface); padding: 22px 20px; display: grid; gap: 8px; align-content: start; }
+  .vs .fig-n { font-size: clamp(34px, 4.4vw, 52px); }
+  .vs .fig-l { margin: 0; }
+  @media (max-width: 760px) { .vs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  /* Findings */
+  .findings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .finding { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; display: grid; gap: 10px; align-content: start; }
+  .finding .fig-n { font-size: 46px; }
+  .finding h3 { font-size: 20px; }
+  .finding p { color: var(--fg-2); font-size: 14.5px; line-height: 1.6; }
+  @media (max-width: 760px) { .findings { grid-template-columns: 1fr; } }
+
+  /* Cost */
+  .ledger { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .ledger td { padding: 14px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .ledger td:last-child { text-align: right; font: 400 21px var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 16px; }
+  .ledger small { display: block; color: var(--fg-3); font-size: 13px; }
+
+  /* Case files */
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+  .tools button { font: 500 13px var(--sans); padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg-2); cursor: pointer; }
+  .tools button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .tools input { flex: 1 1 200px; min-width: 0; font: 14px var(--sans); padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+  details.case { border-bottom: 1px solid var(--line); }
+  details.case:first-of-type { border-top: 1px solid var(--line); }
+  details.case > summary { list-style: none; cursor: pointer; padding: 16px 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: start; }
+  details.case > summary::-webkit-details-marker { display: none; }
+  .cs-name { font-weight: 500; word-break: break-word; }
+  .cs-meta { font: 12px var(--mono); color: var(--fg-3); }
+  .cs-exc { grid-column: 1 / -1; font: 12px var(--mono); color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cs-body { padding: 0 0 22px; display: grid; gap: 10px; min-width: 0; }
+  .cs-body .label { margin-top: 8px; }
+  pre.code { margin: 0; background: var(--sunk); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font: 12px/1.55 var(--mono); max-height: 440px; }
+  pre.code .a { color: var(--beam); } pre.code .d { color: var(--rose); }
+  pre.wrapit { white-space: pre-wrap; word-break: break-word; }
+  ol.att { margin: 0; padding-left: 20px; font-size: 14px; color: var(--fg-2); display: grid; gap: 6px; }
+
+  .limits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+  .limits div { display: grid; gap: 6px; font-size: 15px; color: var(--fg-2); }
+  .limits b { color: var(--fg); font-weight: 500; }
+  @media (max-width: 760px) { .limits { grid-template-columns: 1fr; } }
+
+  footer { margin-top: clamp(80px, 10vw, 128px); padding-block: 28px 56px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; align-items: center; font-size: 13.5px; color: var(--fg-3); }
+  .theme { font: 500 13px var(--sans); border: 1px solid var(--line); background: var(--surface); color: var(--fg-2); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wide">
+  <header class="mast">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h6l2-5 3 10 2-5h7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Space Doctor
+    </div>
+    <nav aria-label="Sections">
+      <a href="#revivals">Results</a><a href="#method">Method</a><a href="#triage">Causes</a><a href="#findings">Findings</a><a href="#cases">Case files</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div class="label">Build with Beam · Reflection AI × Hugging Face · November 2026</div>
+    <h1><span class="nowrap">Every Space deserves</span> <em class="nowrap">a second life.</em></h1>
+    <p class="lede">A third of the most-liked Hugging Face Spaces no longer run. Beam reads each broken Space and writes a repair; we rebuild it and call its API. A Space only counts as revived when it returns a real result.</p>
+    <div class="byline">By <a href="https://huggingface.co/kavyabhand" target="_blank" rel="noopener">Kavya Bhand</a> and <a href="https://huggingface.co/aadi-joshi" target="_blank" rel="noopener">Aadi Joshi</a></div>
+    <div class="actions">
+      <a class="btn primary" href="#revivals">See the revivals</a>
+      <a class="btn" href="https://huggingface.co/datasets/kavyabhand/spacerot" target="_blank" rel="noopener">Dataset ↗</a>
+      <a class="btn" href="https://huggingface.co/reflection/Beam-1.0-501B-A23B" target="_blank" rel="noopener">Model ↗</a>
+      <a class="btn" href="https://github.com/kavyabhand/Space-Doctor" target="_blank" rel="noopener">Code ↗</a>
+    </div>
+  </div>
+
+  <figure>
+    <div class="field-wrap" id="field-wrap">
+      <canvas id="field" role="img" aria-label="Ten thousand dots, one per Space, ordered by likes. Broken Spaces are coral; Spaces revived by Beam are cyan."></canvas>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <figcaption><span class="label">Figure 1</span><span>The 10,000 most-liked Spaces on Hugging Face, one dot each, ordered by likes from the top left. Hover or tap a dot to see the Space.</span></figcaption>
+  </figure>
+
+  <div class="figures" id="figures"></div>
+</div>
+
+<section id="revivals">
+  <div class="read sec-head">
+    <div class="label">1 · Results</div>
+    <h2>Spaces Beam brought back</h2>
+    <p class="prose">Every Space below crashed on Hugging Face. Each thumbnail is what the repaired app returned when we called it in our rebuild. Tap one to see the original error, Beam's diagnosis, the patch and the full output.</p>
+  </div>
+  <div class="wide"><div class="tiles" id="rev"></div>
+    <div class="more"><button class="btn" type="button" id="rev-more" hidden></button></div>
+    <figcaption><span class="label">Figure 2</span><span id="cap2">Revived Spaces, by likes. Tap any one to see the error, the patch, Beam's diagnosis and the output. Each patch for a Space with 30 or more likes is open as a pull request on the original Space.</span></figcaption>
+    <dialog class="case-dlg" id="dlg" aria-label="Revived Space details"><div class="card" id="dlg-card"></div></dialog>
+  </div>
+</section>
+
+<section id="method">
+  <div class="read sec-head">
+    <div class="label">2 · Method</div>
+    <h2>Nothing counts on Beam's word</h2>
+    <div class="prose">
+      <p>Most broken Spaces did nothing wrong. Spaces reinstall unpinned dependencies on every rebuild, so code that worked when it shipped now meets gradio 5 and 6, <code>huggingface_hub</code> 1.0, numpy 2, torch 2.6 and Python 3.13. The fix is usually small. Finding it means reading the repo, the traceback and the installed package versions together.</p>
+      <p>Beam gets all of it in one prompt: the repository with the most relevant files first, Hugging Face's error log, our rebuild log, the exact <code>pip freeze</code>, and the Dockerfile the Space is built from. It answers with a patch, a dated lockfile, or the verdict that the Space can't be fixed honestly. Then we check.</p>
+    </div>
+  </div>
+  <div class="wide">
+    <div class="steps">
+      <div class="step"><span class="label">Step 1</span><b>Reproduce</b><span>Rebuild the untouched Space with the Spaces recipe. It must still fail, or it is not a patient.</span></div>
+      <div class="step"><span class="label">Step 2</span><b>Diagnose</b><span>Beam cites the log line that proves the cause, and can ask for any file it was not shown.</span></div>
+      <div class="step"><span class="label">Step 3</span><b>Check the patch</b><span>Edits must apply and lockfiles must resolve. Failures go straight back to Beam, before any rebuild.</span></div>
+      <div class="step"><span class="label">Step 4</span><b>Guard</b><span>Patches that delete code, drop functions, swallow errors or change special-token text are rejected.</span></div>
+      <div class="step"><span class="label">Step 5</span><b>Rebuild and call</b><span>The Space must boot and its main endpoint must return a non-empty result. If not, Beam tries again at higher effort.</span></div>
+    </div>
+
+    <figure class="fig-block">
+      <div class="panel"><div class="flow-wrap" id="flow"></div></div>
+      <figcaption><span class="label">Figure 3</span><span>From census to outcome. Ribbon widths use a square-root scale so the later stages stay visible.</span></figcaption>
+    </figure>
+
+    <figure class="fig-block">
+      <div class="term" aria-label="Replay of a real repair from the run">
+        <div class="term-h"><i></i><i></i><i></i><span id="term-title">replay</span><button type="button" id="term-next">next case →</button></div>
+        <pre id="term"></pre>
+      </div>
+      <figcaption><span class="label">Figure 4</span><span>One repair, replayed from the run's own case file: the reproduced failure, Beam's diagnosis, the patch, and what the rebuilt app returned.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="triage">
+  <div class="read sec-head">
+    <div class="label">3 · Causes</div>
+    <h2>Why Spaces die, in one call</h2>
+    <p class="prose" id="tri-text">Beam read the error log of every broken Space in a single long-context call and named the causes, each as a regular expression. We ran its expressions over the logs ourselves, so every count is measured.</p>
+  </div>
+  <div class="wide">
+    <figure>
+      <div class="panel">
+        <div class="bubbles" id="bubbles"></div>
+        <div class="key"><span>fixable in code</span><span class="p">platform, hardware or secrets</span><span class="c">catch-all regex, not counted</span></div>
+        <div class="coverage" id="coverage"></div>
+      </div>
+      <figcaption><span class="label">Figure 5</span><span>Root causes proposed by Beam. Bubble area follows the number of broken Spaces each regex matches first.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="baseline">
+  <div class="read sec-head">
+    <div class="label">4 · Control</div>
+    <h2>Does it take a model?</h2>
+    <p class="prose">The obvious alternative needs no model at all: reinstall every dependency as it existed on the day of the Space's last commit, with <code>uv --exclude-newer</code>. We ran it on the same patients, with the same verifier.</p>
+  </div>
+  <div class="wide"><div class="vs" id="vs"></div>
+    <figcaption><span class="label">Figure 6</span><span id="cap6"></span></figcaption>
+  </div>
+</section>
+
+<section id="findings">
+  <div class="read sec-head">
+    <div class="label">5 · Findings</div>
+    <h2>Where Beam could have cheated</h2>
+    <p class="prose">Any model graded by an automatic check can learn to pass the check instead of doing the task. These are the places that could have happened in this project, and what the logs show.</p>
+  </div>
+  <div class="wide findings" id="find"></div>
+</section>
+
+<section id="cost">
+  <div class="read sec-head">
+    <div class="label">6 · Cost</div>
+    <h2>What a revival costs</h2>
+  </div>
+  <div class="read"><table class="ledger" id="ledger"></table></div>
+</section>
+
+<section id="cases">
+  <div class="read sec-head">
+    <div class="label">Appendix</div>
+    <h2>Every patient</h2>
+    <p class="prose">Diagnosis, patch, every attempt and what the rebuilt app did, for each Space Beam treated. Failures included.</p>
+  </div>
+  <div class="read">
+    <div class="tools" id="tools"></div>
+    <div id="list"></div>
+  </div>
+</section>
+
+<section id="limits">
+  <div class="read sec-head">
+    <div class="label">Limits</div>
+    <h2>What this does not claim</h2>
+  </div>
+  <div class="read limits">
+    <div><b>A rebuild, not Hugging Face's builder.</b>We follow the documented Spaces recipe. CPU Spaces use CPU torch wheels, which share the same Python API. Patched READMEs pin the Python version we tested with, so what deploys is what we verified.</div>
+    <div><b>Functional is a smoke test.</b>The main endpoint returned a non-empty result for one real input, the Space's own example file when it ships one. It is not a quality grade, so the outputs are shown for you to judge.</div>
+    <div><b>GPU Spaces ran on one NVIDIA A10G,</b>the GPU of Hugging Face's a10g-small. Spaces that ran on a T4 or L4 were verified on it too.</div>
+    <div><b>Owners decide.</b>Pull requests went only to Spaces we revived, verified and reviewed, each with its evidence. We changed nothing on anyone's Space ourselves.</div>
+  </div>
+</section>
+
+<div class="wide">
+  <footer>
+    <span>Space Doctor · Kavya Bhand and Aadi Joshi · Built with <a href="https://huggingface.co/reflection/Beam-1.0-501B-A23B" target="_blank" rel="noopener">Beam-1.0-501B-A23B</a> for the Build with Beam challenge · <a href="https://github.com/kavyabhand/Space-Doctor" target="_blank" rel="noopener">GitHub</a> · <a href="https://huggingface.co/datasets/kavyabhand/spacerot" target="_blank" rel="noopener">Dataset</a></span>
+    <button class="theme" id="theme" type="button">Switch theme</button>
+  </footer>
+</div>
+
+<script>
+const fmt = n => n == null || Number.isNaN(+n) ? "–" : Number(n).toLocaleString("en-US");
+const pct = (a, b) => b ? Math.round(100 * a / b) + "%" : "–";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const md = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const load = p => fetch(p).then(r => r.ok ? r.json() : null).catch(() => null);
+const STATUS = { functional: ["live", "Revived"], api: ["grey", "Boots, unverified"], rejected: ["dead", "Rejected at review"], unfixable: ["grey", "Unfixable"], failed: ["dead", "Not revived"] };
+const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+(function theme() {
+  const root = document.documentElement, b = document.getElementById("theme");
+  try { const t = localStorage.getItem("sd-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+  b.addEventListener("click", () => {
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("sd-theme", root.dataset.theme); } catch (e) {}
+    if (window.__redraw) window.__redraw();
+  });
+})();
+
+Promise.all([load("data/summary.json"), load("data/triage.json"), load("data/cases.json"), load("data/census_min.json")])
+  .then(([S, T, C, census]) => {
+    C = C || [];
+    const revived = C.filter(c => c.status === "functional").sort((a, b) => b.likes - a.likes);
+    field(census || [], C);
+    figures(S, revived); revivals(revived); flow(S, C); replay(revived); triage(T, S); baseline(S); findings(S, C); ledger(S); caseList(C);
+  });
+
+/* Figure 1: one dot per Space, ordered by likes. Revived Spaces are drawn last, in cyan, with a slow pulse. */
+function field(census, cases) {
+  const cv = document.getElementById("field"), wrap = document.getElementById("field-wrap"), tip = document.getElementById("tip");
+  const status = new Map(cases.map(c => [c.space, c.status]));
+  const N = census.length;
+  const counts = { run: 0, idle: 0, dead: 0, live: 0 };
+  const kind = census.map(([id, , s]) => {
+    const k = status.get(id) === "functional" ? "live" : s === 2 ? "dead" : s === 1 ? "idle" : "run";
+    counts[k]++; return k;
+  });
+  document.getElementById("legend").innerHTML =
+    `<span><i style="background:rgba(var(--dot),.55)"></i>Running · ${fmt(counts.run)}</span>` +
+    `<span><i style="background:rgba(var(--dot),.2)"></i>Paused or sleeping · ${fmt(counts.idle)}</span>` +
+    `<span><i style="background:var(--rose)"></i>Still broken · ${fmt(counts.dead)}</span>` +
+    `<span><i style="background:var(--beam);box-shadow:0 0 8px var(--beam)"></i>Revived by Beam · ${fmt(counts.live)}</span>`;
+  if (!N) return;
+  let cols, cell, W, H, dpr, live = [];
+  const ctx = cv.getContext("2d");
+  function layout() {
+    W = wrap.clientWidth; dpr = Math.min(2, window.devicePixelRatio || 1);
+    cell = W < 560 ? 4.4 : W < 900 ? 5.2 : 5.8;
+    cols = Math.floor(W / cell); H = Math.ceil(Math.ceil(N / cols) * cell);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + "px";
+    live = []; kind.forEach((k, i) => { if (k === "live") live.push(i); });
+  }
+  const xy = i => [(i % cols) * cell + cell / 2, Math.floor(i / cols) * cell + cell / 2];
+  function draw(t) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+    const dot = css("--dot"), rose = css("--rose"), beam = css("--beam"), r = cell * 0.3;
+    for (let i = 0; i < N; i++) {
+      const k = kind[i]; if (k === "live") continue;
+      const [x, y] = xy(i);
+      ctx.fillStyle = k === "dead" ? rose : `rgba(${dot},${k === "idle" ? 0.18 : 0.5})`;
+      ctx.beginPath(); ctx.arc(x, y, k === "dead" ? r * 1.05 : r * 0.85, 0, 6.2832); ctx.fill();
+    }
+    for (const i of live) {
+      const [x, y] = xy(i);
+      if (t != null) {
+        const ph = ((t / 1000 + (i % 7) * 0.31) % 2.4) / 2.4;
+        if (ph < 0.6) {
+          ctx.strokeStyle = beam; ctx.globalAlpha = 0.6 * (1 - ph / 0.6); ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.arc(x, y, r * 1.6 + ph * cell * 2.6, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
+        }
+      }
+      ctx.fillStyle = beam; ctx.shadowColor = beam; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(x, y, r * 1.9, 0, 6.2832); ctx.fill(); ctx.shadowBlur = 0;
+    }
+  }
+  layout(); draw(still ? null : 0);
+  if (!still && live.length) { const loop = t => { draw(t); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+  window.__redraw = () => draw(still ? null : performance.now());
+  let raf; addEventListener("resize", () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { layout(); draw(still ? null : performance.now()); }); });
+  const label = { run: "Running", idle: "Paused or sleeping", dead: "Broken", live: "Revived by Beam" };
+  function show(ev) {
+    const b = cv.getBoundingClientRect(), x = ev.clientX - b.left, y = ev.clientY - b.top;
+    const i = Math.floor(y / cell) * cols + Math.floor(x / cell);
+    if (i < 0 || i >= N || x < 0 || x >= cols * cell) { tip.hidden = true; return; }
+    const [id, likes] = census[i], k = kind[i];
+    tip.innerHTML = `<span class="st" style="color:${k === "dead" ? "var(--rose)" : k === "live" ? "var(--beam)" : "var(--fg-3)"}">${label[k]}</span><b>${esc(id)}</b><span class="num">♥ ${fmt(likes)} · rank ${fmt(i + 1)}</span><br><a href="https://huggingface.co/spaces/${esc(id)}" target="_blank" rel="noopener">Open on Hugging Face ↗</a>`;
+    tip.hidden = false;
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = Math.max(0, Math.min(x + 14, b.width - tw)) + "px";
+    tip.style.top = (y + 14 + th > b.height ? Math.max(0, y - th - 10) : y + 14) + "px";
+  }
+  cv.addEventListener("mousemove", show); cv.addEventListener("click", show);
+  wrap.addEventListener("mouseleave", () => { tip.hidden = true; });
+}
+
+function figures(S, revived) {
+  if (!S) return;
+  const c = S.census, likesBack = revived.reduce((a, x) => a + x.likes, 0);
+  document.getElementById("figures").innerHTML = [
+    [pct(c.broken, c.spaces), "rose", `of the ${fmt(c.spaces)} most-liked Spaces are broken, ${fmt(c.broken)} in all`],
+    [fmt(c.broken_likes), "rose", "likes on Spaces that now show a runtime error"],
+    [fmt(revived.length), "beam", "Spaces revived by Beam, each verified by calling its API"],
+    [fmt(likesBack), "beam", "likes on Spaces that work again"],
+  ].map(([n, k, l]) => `<div><div class="fig-n ${k}">${n}</div><div class="fig-l">${esc(l)}</div></div>`).join("");
+}
+
+function mediaHtml(src) {
+  if (/\.(png|jpe?g|webp|gif)$/i.test(src)) return `<img class="media" loading="lazy" src="${esc(src)}" alt="Output returned by the revived Space">`;
+  if (/\.(wav|mp3|flac|ogg)$/i.test(src)) return `<audio class="media" controls preload="none" src="${esc(src)}"></audio>`;
+  if (/\.(mp4|webm)$/i.test(src)) return `<video class="media" controls preload="none" muted src="${esc(src)}"></video>`;
+  return "";
+}
+function inputNote(c) {
+  if (!c.probe || !c.probe.inputs) return "";
+  const media = c.probe.inputs.filter(x => /\.(png|jpe?g|webp|wav|mp3|flac|mp4)$/i.test(x));
+  const own = media.filter(x => x.includes("/fixed/") || x.includes("/home/user/app/") || x.includes("/reprobe/")).map(x => x.split("/").pop());
+  const text = c.probe.inputs.filter(x => !/\//.test(x) && x.length > 3).slice(0, 1);
+  const s = own.length ? `the Space's own <code>${esc(own[0])}</code>` : media.length ? "a generated test file" : text.length ? `“${esc(text[0])}”` : "";
+  return s ? `<div class="note">Input: ${s}</div>` : "";
+}
+function diffStat(d) {
+  if (!d) return "";
+  const L = d.split("\n"), a = L.filter(l => l.startsWith("+") && !l.startsWith("+++")).length, r = L.filter(l => l.startsWith("-") && !l.startsWith("---")).length;
+  const f = L.filter(l => l.startsWith("+++ ")).length;
+  return `${f} file${f === 1 ? "" : "s"} · <span class="add">+${a}</span> <span class="del">−${r}</span>`;
+}
+/* A lifeline: flat coral line, then a cyan heartbeat that keeps moving. 80 user units per beat. */
+function lifeline(i) {
+  const beat = "h20 l6 -6 l6 10 l6 -24 l7 34 l6 -14 h29";
+  const id = `clip${i}`;
+  return `<svg class="life" viewBox="0 0 400 46" preserveAspectRatio="none" aria-hidden="true">
+    <defs><clipPath id="${id}"><rect x="150" y="0" width="250" height="46"/></clipPath></defs>
+    <path class="flat" d="M0 26 H150" fill="none" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+    <g clip-path="url(#${id})"><g class="run" style="animation-delay:-${(i * 0.37).toFixed(2)}s"><path class="beat" d="M150 26 ${beat.repeat(5)}" fill="none" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></g></g>
+  </svg>`;
+}
+function cardHtml(c, i) {
+  const m = (c.media || []).map(mediaHtml).find(Boolean);
+  const out = m || (c.probe ? `<pre class="out">${esc(String(c.probe.output).slice(0, 900))}</pre>`
+    : `<div class="note">${c.sdk === "streamlit" ? "Streamlit app: the page loaded. Streamlit has no API to call, so this is a page-load check." : "The app booted and served its API."}</div>`);
+  return `${lifeline(i)}
+    <div class="card-top"><div class="card-name"><a href="https://huggingface.co/spaces/${esc(c.space)}" target="_blank" rel="noopener">${esc(c.space)} ↗</a></div>
+      <div class="card-sub num">♥ ${fmt(c.likes)} · ${c.gpu ? "NVIDIA A10G" : "CPU"} · ${esc(c.category || "")}</div></div>
+    <div class="was"><div class="row"><span class="label">On Hugging Face today</span><span class="chip dead">Runtime error</span></div><pre>${esc(c.hf_exception)}</pre></div>
+    <div class="now"><div class="row"><span class="label">After Beam's patch${c.probe ? " · " + esc(c.probe.endpoint) : ""}</span><span class="chip live">Verified</span></div>${out}${inputNote(c)}</div>
+    <div class="diag">${md(c.diagnosis)}</div>
+    ${c.review && c.review.reason ? `<div class="diag"><span class="label">Our review</span><br>${esc(c.review.reason)}</div>` : ""}
+    <div class="foot"><span>${diffStat(c.diff)}</span><span>${c.attempts.length} attempt${c.attempts.length > 1 ? "s" : ""} · ${esc(c.attempts.map(a => a.effort).join(" → "))}</span>${c.lock ? `<span>lockfile as of ${esc(c.lock.date)}</span>` : ""}
+      ${c.pr ? `<a href="${esc(c.pr)}" target="_blank" rel="noopener">Pull request ↗</a>` : ""}<a href="#case-${esc(c.space.replace("/", "__"))}" data-close>Full case file</a></div>`;
+}
+function thumbHtml(c) {
+  const media = c.media || [];
+  const img = media.find(x => /\.(png|jpe?g|webp|gif)$/i.test(x)), vid = media.find(x => /\.(mp4|webm)$/i.test(x)), aud = media.find(x => /\.(wav|mp3|flac|ogg)$/i.test(x));
+  if (vid) return `<video src="${esc(vid)}#t=0.5" muted playsinline preload="metadata" aria-hidden="true"></video><span class="kind">Video</span>`;
+  if (img) return `<img src="${esc(img)}" alt="" loading="lazy"><span class="kind">${c.sdk === "streamlit" ? "Page" : "Image"}</span>`;
+  if (aud) return `<svg class="wave" viewBox="0 0 120 40" aria-hidden="true"><path d="M0 20 H14 L18 8 L22 32 L26 4 L30 36 L34 12 L38 28 L42 20 H56 L60 10 L64 30 L68 16 L72 24 L76 20 H120" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="kind">Audio</span>`;
+  const t = c.probe ? String(c.probe.output) : "";
+  return `<div class="txt">${esc(t.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 260))}</div><span class="kind">Text</span>`;
+}
+function revivals(list) {
+  const el = document.getElementById("rev"), more = document.getElementById("rev-more"), dlg = document.getElementById("dlg"), card = document.getElementById("dlg-card");
+  if (!list.length) { el.innerHTML = '<div class="empty">Revivals appear here as the run completes.</div>'; return; }
+  const FIRST = 10;
+  let all = false;
+  const draw = () => {
+    const shown = all ? list : list.slice(0, FIRST);
+    el.innerHTML = shown.map((c, i) => `<button class="tile" type="button" data-i="${i}" aria-label="${esc(c.space)}: show details">
+      ${lifeline(i)}<div class="thumb">${thumbHtml(c)}</div>
+      <div class="tile-b"><div class="tile-n">${esc(c.space.split("/")[1])}</div><div class="tile-o">${esc(c.space.split("/")[0])}</div>
+      <div class="tile-m"><span>♥ ${fmt(c.likes)}${c.gpu ? " · A10G" : ""}</span><span class="chip live">Verified</span></div></div></button>`).join("");
+    more.hidden = list.length <= FIRST;
+    more.textContent = all ? "Show fewer" : `Show all ${list.length} revivals`;
+  };
+  draw();
+  more.addEventListener("click", () => { all = !all; draw(); if (!all) document.getElementById("revivals").scrollIntoView({ block: "start" }); });
+  el.addEventListener("click", e => {
+    const t = e.target.closest(".tile"); if (!t) return;
+    card.innerHTML = `<div class="dlg-x"><button type="button" data-close>Close ✕</button></div>` + cardHtml(list[+t.dataset.i], +t.dataset.i);
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+  });
+  dlg.addEventListener("click", e => {
+    if (e.target === dlg || e.target.closest("[data-close]")) { dlg.close ? dlg.close() : dlg.removeAttribute("open"); }
+  });
+}
+
+/* Figure 3: flow ribbons from census to outcome (square-root widths). */
+function flow(S, C) {
+  if (!S) return;
+  const c = S.census, cnt = s => C.filter(x => x.status === s).length, treated = C.length;
+  const H = 380, sq = v => Math.max(4, 160 * Math.sqrt(v / c.spaces)), GAP = 30;
+  const cols = [
+    [["Checked", c.spaces, "rgba(var(--dot),.75)"]],
+    [["Running or idle", c.spaces - c.broken, "rgba(var(--dot),.5)"], ["Broken", c.broken, "var(--rose)"]],
+    [["Not yet treated", Math.max(0, c.broken - treated), "rgba(var(--dot),.4)"], ["Treated by Beam", treated, "var(--fg-2)"]],
+    [["Revived", cnt("functional"), "var(--beam)"], ["Boots, unverified", cnt("api"), "rgba(var(--dot),.7)"], ["Unfixable", cnt("unfixable"), "rgba(var(--dot),.45)"], ["Not revived", cnt("failed") + cnt("rejected"), "var(--rose)"]],
+  ];
+  const X = [30, 330, 630, 900], nodes = [];
+  cols.forEach((col, ci) => {
+    const tot = col.reduce((a, [, v]) => a + sq(v), 0) + GAP * (col.length - 1);
+    let y = (H - tot) / 2;
+    col.forEach(([l, v, colr]) => { const h = sq(v); nodes.push({ ci, l, v, colr, x: X[ci], y, h }); y += h + GAP; });
+  });
+  const node = (ci, l) => nodes.find(q => q.ci === ci && q.l === l);
+  const links = [[0, "Checked", 1, "Running or idle"], [0, "Checked", 1, "Broken"], [1, "Broken", 2, "Not yet treated"], [1, "Broken", 2, "Treated by Beam"],
+    [2, "Treated by Beam", 3, "Revived"], [2, "Treated by Beam", 3, "Boots, unverified"], [2, "Treated by Beam", 3, "Unfixable"], [2, "Treated by Beam", 3, "Not revived"]];
+  const used = {};
+  const ribbons = links.map(([a, la, b, lb]) => {
+    const s = node(a, la), t = node(b, lb); if (!t.v) return "";
+    // Leaves the source as its true share of the source block; arrives at the target block's own height.
+    const ws = Math.max(1.5, s.h * t.v / s.v), u = used[la] || 0; used[la] = u + ws;
+    const sy = s.y + u, x1 = s.x + 12, x2 = t.x, m = (x1 + x2) / 2;
+    return `<path d="M${x1} ${sy} C${m} ${sy} ${m} ${t.y} ${x2} ${t.y} L${x2} ${t.y + t.h} C${m} ${t.y + t.h} ${m} ${sy + ws} ${x1} ${sy + ws} Z" fill="${t.colr}" fill-opacity=".2"/>`;
+  }).join("");
+  const blocks = nodes.map(q => {
+    const ty = q.y + q.h / 2 + 5;
+    return `<rect x="${q.x}" y="${q.y}" width="12" height="${q.h}" rx="4" fill="${q.colr}"/>
+      <text x="${q.x + 22}" y="${ty}" style="font:500 14px var(--sans);fill:var(--fg)">${q.l}<tspan dx="8" style="font:400 12px var(--mono);fill:var(--fg-3)">${fmt(q.v)}</tspan></text>`;
+  }).join("");
+  document.getElementById("flow").innerHTML = `<svg viewBox="0 0 1120 ${H}" role="img" aria-label="Flow from ${fmt(c.spaces)} checked Spaces to Beam's outcomes">${ribbons}${blocks}</svg>`;
+}
+
+/* Figure 4: terminal replay of real revivals. */
+function replay(list) {
+  const term = document.getElementById("term"), title = document.getElementById("term-title"), btn = document.getElementById("term-next");
+  if (!list.length) { term.innerHTML = '<span class="d">$ spacedoctor treat …</span>\nA revival is replayed here as soon as the run produces one.'; btn.hidden = true; return; }
+  const body = c => {
+    const L = (c.diff || "").split("\n"), add = L.filter(l => l.startsWith("+") && !l.startsWith("+++")).length, del = L.filter(l => l.startsWith("-") && !l.startsWith("---")).length;
+    const files = L.filter(l => l.startsWith("+++ ")).length;
+    const lines = L.filter(l => /^[+-](?![+-])/.test(l)).slice(0, 6).map(l => `<span class="${l[0] === "+" ? "ok" : "bad"}">${esc(l.slice(0, 110))}</span>`).join("\n");
+    const out = (c.media || []).length ? `${c.media.length} output file${c.media.length > 1 ? "s" : ""} (${esc(c.media.map(m => m.split(".").pop()).join(", "))}), non-empty` : esc(String(c.probe ? c.probe.output : "ok").slice(0, 150));
+    const n = c.attempts.length;
+    return `<span class="d">$ spacedoctor treat ${esc(c.space)}</span>
+<span class="d">[census]   </span> ♥ ${fmt(c.likes)} · status RUNTIME_ERROR
+<span class="d">[reproduce]</span> <span class="bad">${esc(c.hf_exception.slice(0, 150))}</span>
+<span class="d">[beam]     </span> effort=${esc(c.attempts.map(a => a.effort).join("→"))} · ${fmt(c.tokens.prompt_tokens)} in / ${fmt(c.tokens.completion_tokens)} out
+<span class="bm">${esc(c.diagnosis.slice(0, 280))}${c.diagnosis.length > 280 ? "…" : ""}</span>
+<span class="d">[patch]    </span> ${files} file${files === 1 ? "" : "s"} +${add} −${del}${c.lock ? ` · lockfile @ ${esc(c.lock.date)}` : ""}
+${lines}
+<span class="d">[guard]    </span> ok
+<span class="d">[rebuild]  </span> boots · api ok${c.gpu ? " · nvidia a10g" : ""}
+<span class="d">[call]     </span> ${esc(c.probe ? c.probe.endpoint : "")} → <span class="ok">${out}</span>
+<span class="ok">✓ revived after ${n} attempt${n > 1 ? "s" : ""}</span>`;
+  };
+  let i = 0, timer;
+  const show = () => { const c = list[i % list.length]; title.textContent = `replay · ${c.space}`; term.style.opacity = 0; setTimeout(() => { term.innerHTML = body(c); term.style.opacity = 1; }, 180); };
+  const cycle = () => { clearInterval(timer); if (!still && list.length > 1) timer = setInterval(() => { i++; show(); }, 10000); };
+  term.innerHTML = body(list[0]); title.textContent = `replay · ${list[0].space}`;
+  btn.hidden = list.length < 2;
+  btn.addEventListener("click", () => { i++; show(); cycle(); });
+  cycle();
+}
+
+/* Figure 5: cause bubbles and coverage. */
+function triage(T, S) {
+  const el = document.getElementById("bubbles");
+  if (!T) { el.outerHTML = '<div class="empty">Triage results not available.</div>'; return; }
+  const X = (S && S.triage) || {};
+  const catchNames = new Set((X.catch_all_families || []).map(f => f.name));
+  const fam = T.families.filter(f => f.first_match_only > 0).sort((a, b) => b.first_match_only - a.first_match_only).slice(0, 14);
+  const max = Math.max(1, ...fam.map(f => f.first_match_only));
+  el.innerHTML = fam.map(f => {
+    const d = Math.round(34 + 94 * Math.sqrt(f.first_match_only / max));
+    const k = catchNames.has(f.name) ? "catch" : f.fixable_in_code ? "fix" : "plat";
+    return `<div class="bub"><i class="${k}" style="width:${d}px;height:${d}px" title="${esc(f.typical_fix || "")}">${fmt(f.first_match_only)}</i><span>${esc(f.name)}</span></div>`;
+  }).join("");
+  const tok = (X.prompt_tokens || [])[0];
+  document.getElementById("tri-text").textContent = `Beam read the error logs of all ${fmt(T.n_logs)} broken Spaces in a single call, ${fmt(tok)} tokens of input, and named the causes, each as a regular expression. We ran its expressions over the logs ourselves, so every count is measured.`;
+  document.getElementById("coverage").innerHTML = [
+    [pct(X.coverage_round1, 1), "", "of logs matched by Beam's first call"],
+    [pct(X.coverage_reported, 1), "strike", "after a second call, padded by one catch-all regex"],
+    [pct(X.coverage_specific, 1), "beam", "matched by a specific cause: the figure we report"],
+  ].map(([n, k, l]) => `<div><div class="fig-n ${k}">${n}</div><div class="fig-l">${esc(l)}</div></div>`).join("");
+}
+
+function baseline(S) {
+  const el = document.getElementById("vs"), b = S && S.baseline;
+  if (!b || !b.compared) { el.outerHTML = '<div class="empty">The baseline comparison is still running.</div>'; return; }
+  el.innerHTML = [["Beam only", b.beam_only, "beam", "revived by Beam but not by the baseline"], ["Baseline only", b.baseline_only, "", "revived by the baseline but not by Beam"],
+                  ["Both", b.both, "", "revived either way"], ["Neither", b.neither, "", "revived by neither"]]
+    .map(([l, n, k, d]) => `<div><div class="label">${esc(l)}</div><div class="fig-n ${k}">${fmt(n)}</div><div class="fig-l">${esc(d)}</div></div>`).join("");
+  document.getElementById("cap6").textContent = `${fmt(b.compared)} patients run both ways with the same verifier. Baseline: every dependency resolved as of the Space's last commit, Python 3.10 unless pinned.`;
+}
+
+function findings(S, C) {
+  if (!S) return;
+  const t = S.treatment, X = S.triage || {};
+  const catchN = (X.catch_all_families || []).reduce((a, f) => a + f.matched, 0);
+  const sum = k => C.reduce((n, c) => n + (c[k] || 0), 0);
+  const items = [
+    [t.declared_unfixable, "It said “unfixable” instead of faking a fix.", "CodeGeeX needs its owner's paid API key, and Beam still named the Python 3.13 fix for the owner. Every-Text loads its entire app from a secret. Real-Time-Voice-Cloning's weights sit behind a dead Google Drive link. We read every verdict against the logs."],
+    [(t.rejected_at_review || []).length, "Some patches passed every automatic check and were still wrong.", "We read every revival before counting it. These patches were rejected at review: one rewrote each <|endoftext|> in the app as junk text; others loosened an input check, returned placeholder messages, handed back the input unchanged, or only stopped an API-key error from crashing. Each one made our probe pass without making the app work. None is counted, and the guard now blocks the special-token case automatically."],
+    [catchN, "It padded a metric when it could.", `Asked to cover the logs its first triage missed, Beam added one regex that matches almost any failure. Coverage appeared to jump from ${pct(X.coverage_round1, 1)} to ${pct(X.coverage_reported, 1)}. Code measured the regexes, so we report ${pct(X.coverage_specific, 1)}.`],
+    [sum("apply_errors"), "Some patches quoted code that wasn't there.", `In large repos Beam sometimes edited lines it had never been shown. Each bad edit is caught in seconds, before a rebuild, and sent back. Beam can now ask for files instead, and did so ${fmt(sum("need_files"))} times.`],
+  ];
+  document.getElementById("find").innerHTML = items.map(([n, h, p], i) => `<div class="finding"><div class="fig-n num ${i === 0 ? "beam" : "rose"}">${fmt(n)}</div><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("");
+}
+
+function ledger(S) {
+  if (!S) return;
+  const t = S.treatment, X = S.triage || {}, rev = (t.tiers || {}).functional || 0;
+  const triIn = (X.prompt_tokens || []).reduce((a, b) => a + (b || 0), 0), triN = (X.prompt_tokens || []).length;
+  const fixedAt = Object.entries(t.fixed_at || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} at ${k}`).join(", ") || "–";
+  const rows = [
+    ["Beam calls", `${fmt(triN)} for triage, ${fmt(t.beam_calls)} for repairs`, fmt(t.beam_calls + triN)],
+    ["Input tokens", `${pct(t.cached_prompt_tokens, t.prompt_tokens)} of repair input served from Reflection's prompt cache`, fmt(t.prompt_tokens + triIn)],
+    ["Output tokens", "reasoning included", fmt(t.completion_tokens)],
+    ["Output tokens per revival", "every call counted, failures included", rev ? fmt(Math.round(t.completion_tokens / rev)) : "–"],
+    ["Median Beam call", "", t.median_beam_secs != null ? Math.round(t.median_beam_secs) + " s" : "–"],
+    ["Median time per Space", "end to end; almost all of it is Docker builds", t.median_wall_secs ? Math.round(t.median_wall_secs / 60) + " min" : "–"],
+    ["Revivals by reasoning effort", fixedAt, fmt(rev)],
+  ];
+  document.getElementById("ledger").innerHTML = rows.map(([a, b, v]) => `<tr><td>${esc(a)}${b ? `<small>${esc(b)}</small>` : ""}</td><td>${esc(v)}</td></tr>`).join("");
+}
+
+function diffHtml(d) {
+  return esc(d).split("\n").map(l => l.startsWith("+") && !l.startsWith("+++") ? `<span class="a">${l}</span>` : l.startsWith("-") && !l.startsWith("---") ? `<span class="d">${l}</span>` : l).join("\n");
+}
+function caseList(C) {
+  const box = document.getElementById("list"), bar = document.getElementById("tools");
+  if (!C.length) { box.innerHTML = '<div class="empty">No case files yet.</div>'; return; }
+  const order = { functional: 0, api: 1, rejected: 2, unfixable: 3, failed: 4 };
+  C = [...C].sort((a, b) => (order[a.status] - order[b.status]) || (b.likes - a.likes));
+  const keys = ["all", ...Object.keys(STATUS).filter(k => C.some(c => c.status === k))];
+  let cur = "all", q = "", limit = 10;
+  bar.innerHTML = keys.map(k => `<button type="button" data-k="${k}" aria-pressed="${k === cur}">${k === "all" ? "All" : STATUS[k][1]} · ${C.filter(c => k === "all" || c.status === k).length}</button>`).join("") +
+    `<input type="search" id="q" placeholder="Search a Space or an error" aria-label="Search case files">`;
+  const draw = () => {
+    bar.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === cur));
+    const list = C.filter(c => (cur === "all" || c.status === cur) && (!q || (c.space + " " + c.hf_exception + " " + (c.category || "")).toLowerCase().includes(q)));
+    const total = list.length;
+    box.innerHTML = total ? list.slice(0, limit).map(c => `<details class="case" id="case-${esc(c.space.replace("/", "__"))}">
+      <summary><div><div class="cs-name">${esc(c.space)}</div><div class="cs-meta">♥ ${fmt(c.likes)} · ${c.gpu ? "GPU" : "CPU"} · ${c.attempts.length} attempt${c.attempts.length === 1 ? "" : "s"} · ${fmt(c.tokens.prompt_tokens)} in / ${fmt(c.tokens.completion_tokens)} out${c.baseline ? " · baseline: " + esc(c.baseline) : ""}</div></div>
+        <span class="chip ${STATUS[c.status][0]}">${STATUS[c.status][1]}</span><div class="cs-exc" title="${esc(c.hf_exception)}">${esc(c.hf_exception)}</div></summary>
+      <div class="cs-body">
+        ${c.review ? `<div class="label">Review</div><div>${esc(c.review.reason)}</div>` : ""}
+        <div class="label">Beam's diagnosis</div><div>${md(c.diagnosis)}</div>
+        ${c.diff ? `<div class="label">Patch</div><pre class="code">${diffHtml(c.diff)}</pre>` : ""}
+        ${c.probe ? `<div class="label">What the rebuilt app returned · ${esc(c.probe.endpoint)}</div><pre class="code wrapit">${esc(c.probe.output)}</pre>` : ""}
+        ${(c.media || []).length ? `<div class="label">Output</div>${c.media.map(mediaHtml).join("")}` : ""}
+        <div class="label">Attempts</div><ol class="att">${c.attempts.map(a => `<li><b>${esc(a.effort)}</b> → ${esc(a.stage)}${a.guard ? ` <span class="note">(${esc(a.guard)})</span>` : ""}<br><span class="note">${md(a.diagnosis)}</span></li>`).join("")}</ol>
+        <div class="label">Hugging Face's log, last lines</div><pre class="code wrapit">${esc(c.hf_error_tail)}</pre>
+        <a href="https://huggingface.co/spaces/${esc(c.space)}" target="_blank" rel="noopener">Open the Space ↗</a>
+      </div></details>`).join("") + (total > limit ? `<div class="more"><button class="btn" type="button" id="cases-more">View more · ${fmt(total - limit)} remaining</button></div>` : "") : '<div class="empty">No case matches.</div>';
+  };
+  box.addEventListener("click", e => { if (e.target.closest("#cases-more")) { limit += 10; draw(); } });
+  bar.addEventListener("click", e => { const b = e.target.closest("button"); if (b) { cur = b.dataset.k; limit = 10; draw(); } });
+  bar.addEventListener("input", e => { if (e.target.id === "q") { q = e.target.value.trim().toLowerCase(); limit = 10; draw(); } });
+  draw();
+  const openHash = () => {
+    if (!location.hash.startsWith("#case-")) return;
+    let d = document.getElementById(location.hash.slice(1));
+    if (!d) { cur = "all"; q = ""; limit = C.length; draw(); d = document.getElementById(location.hash.slice(1)); }  // a link to a case further down the list
+    if (d) { d.open = true; d.scrollIntoView({ block: "start" }); }
+  };
+  openHash(); addEventListener("hashchange", openHash);
+}
+</script>
+
+</html>

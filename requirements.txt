@@ -1,0 +1,7 @@
+requests
+pyyaml
+huggingface_hub
+gradio_client
+websockets>=12
+uv
+playwright

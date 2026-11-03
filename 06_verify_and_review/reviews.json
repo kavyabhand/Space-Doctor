@@ -1,0 +1,191 @@
+{
+ "m-ric/beam_search_visualizer": {
+  "verdict": "rejected",
+  "reason": "The patch replaced every <|endoftext|> in app.py with the junk string 'c\u00eda'. The app still boots and returns output, so the probe passed, but its logic for detecting finished sequences is now wrong. Beam apparently cannot write this special token literally. Caught at review; a guard for special-token text was added afterwards."
+ },
+ "bookbot/Image-Upscaling-Playground": {
+  "verdict": "approved",
+  "reason": "Removes allow_flagging (rejected by gradio 6) and moves css to launch(). Behaviour unchanged except gradio's default flag button may appear; flagging_mode='never' would have kept it hidden. Output checked: a 2x upscale of the Space's own example."
+ },
+ "daspartho/prompt-extend": {
+  "verdict": "approved",
+  "reason": "Removes the enable_queue argument gradio dropped. No behaviour change. Output checked: an extended prompt."
+ },
+ "SRDdev/Image-Caption": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-06-15 plus migration of the two removed gradio 3 component calls (gr.inputs.Image, gr.outputs.Textbox). Behaviour unchanged. Output checked: a correct caption of the Space's own example1.jpg."
+ },
+ "nateraw/background-remover": {
+  "verdict": "approved",
+  "reason": "gradio 2.9.4 -> 4.44.1 with components migrated, plus a User-Agent header on the example-image downloads (Wikimedia now rejects anonymous requests). Model and logic untouched. Output checked: the background cleanly removed from the Space's own example photo."
+ },
+ "stabilityai/stablelm-2-1_6b-zephyr": {
+  "verdict": "approved",
+  "reason": "Dependency lock only (as of 2024-06-01, Python 3.10): the gradio 4.15 app needs the huggingface_hub and Python of its era. No code changed. Output checked: a coherent chat reply from the model."
+ },
+ "adirik/OWL-ViT": {
+  "verdict": "approved",
+  "reason": "Dependency lock only (as of 2023-03-10, Python 3.10) for a gradio 3.20 app that breaks on numpy 2 and transformers 5. No code changed. Output checked with the query 'astronaut, rocket, flag' on the Space's own example image: boxes drawn around the flag and the rocket."
+ },
+ "clem/Image_Face_Upscale_Restoration-GFPGAN": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-01-15 and gradio 3.1.7 -> 3.50.2 for the torchvision functional_tensor and httpx socket_options breaks. Model code untouched. Output checked: restored image returned."
+ },
+ "havas79/Real-ESRGAN_Demo": {
+  "verdict": "approved",
+  "reason": "Dependency pins only, chosen after a dated lock failed on torch 1.12's executable-stack error. No code changed. Output checked: upscaled image returned."
+ },
+ "Amrrs/openai-whisper-live-transcribe": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-06-15 (Python 3.8) and openai-whisper pinned to a fixed commit; an unused tensorflow requirement is dropped (no .py file imports it). Output checked: a test tone transcribed."
+ },
+ "microsoft/unispeech-speaker-verification": {
+  "verdict": "approved",
+  "pr": false,
+  "reason": "Works, but Beam replaced sox_effects (unavailable) with its own torchaudio loading, which keeps mono, 16 kHz, gain and the 10 s trim but drops sox's silence trimming. A small behaviour change, so it counts as revived but no pull request was opened; adding sox to packages.txt would have been the closer fix."
+ },
+ "pritish/BookGPT": {
+  "verdict": "rejected",
+  "reason": "Beam removed the app's PDF-only upload restriction so that our probe's test file would pass, and the returned text is the app's own input-validation error. The app also needs a user's OpenAI key. Gaming the verifier; not counted."
+ },
+ "kadirnar/Video-Diffusion-WebUI": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-03-15 plus a one-line fix for the diffusers API change (`.frames` is now batched, so `.frames[0]`). Output checked: a generated video."
+ },
+ "tomg-group-umd/pez-dispenser": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-08-01; no code changed. Output checked: an optimized hard prompt for the Space's own sample image (PEZ prompts are deliberately odd-looking)."
+ },
+ "mikonvergence/theaTRON": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-07-15 plus a device fallback (cuda when available, else cpu with float32); behaviour on GPU unchanged. Output checked: a generated image."
+ },
+ "microsoft/wavlm-speaker-verification": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-07-15; no code changed. Output checked: the speaker-similarity result for two audio clips."
+ },
+ "danielsapit/JPEG_Artifacts_Removal": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-07-15; torch.load gets weights_only=False (the Space's own checkpoint, the pre-2.6 default) and outputs declare type='pil'. Output checked: before/after images."
+ },
+ "nielsr/CLIPSeg": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-03-01; no code changed. Output checked: a segmentation map for the Space's own example image."
+ },
+ "rendchevi11/nix-tts": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2021-12-15; no code changed. Streamlit render check: the app page loads with no error box."
+ },
+ "arcee-ai/mergekit-config-generator": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-05-15; no code changed. Output checked: a generated merge config."
+ },
+ "johko/capdec-image-captioning": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-01-15; no code changed. Output checked: 'A man holding a cell phone up to the side of his head.' for the Space's own example."
+ },
+ "swzamir/Restormer": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-11-01 plus migration of removed gradio 2/3 component calls. Output checked: a restored image."
+ },
+ "Huage001/LinFusion-SD-v1.5": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-09-01; no code changed. Output checked: an image-to-image result."
+ },
+ "hynt/F5-TTS-Vietnamese-100h": {
+  "verdict": "approved",
+  "reason": "Dependency pins (Python 3.10, a torchaudio without the TorchCodec default); no code changed. Output checked: synthesized speech."
+ },
+ "yhshin/latex-ocr": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-09-20 plus gradio component migration. Output checked: LaTeX read from the Space's own example image."
+ },
+ "menghanxia/disco": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-11-01; no code changed. Output checked: a colorized image."
+ },
+ "flax-sentence-embeddings/sentence-embeddings": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-07-20; jax.numpy replaced by numpy for one cosine-similarity helper (jaxlib cannot be installed). Streamlit render check: the app page loads with no error box."
+ },
+ "Geonmo/laion-aesthetic-predictor": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-01-15; no code changed. Output checked: an aesthetic score of 6.77 for the Space's own example."
+ },
+ "stable-diffusion-ai/OLD_upscaling": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-07-15 plus gradio component migration. Output checked: an upscaled image."
+ },
+ "dt/ascii-art": {
+  "verdict": "approved",
+  "reason": "gradio component migration only. Output checked: an image and its ASCII art."
+ },
+ "JayRaghav/Image_segmentation": {
+  "verdict": "approved",
+  "reason": "Adds the missing onnxruntime dependency and renames queue(concurrency_count) for gradio 4. Output checked: a segmented image."
+ },
+ "keras-io/Object-Detection-Using-RetinaNet": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-11-01; no code changed. Output checked: detections drawn on a test image."
+ },
+ "kevinwang676/E2-F5-TTS": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-10-01; no code changed. Output checked: synthesized speech."
+ },
+ "aiqcamp/facefusion3": {
+  "verdict": "unverified",
+  "reason": "The app boots, but the probe hit a UI step (job creation) that returns interface updates, not a face swap."
+ },
+ "flax-community/code-clippy-problem-solver": {
+  "verdict": "unverified",
+  "reason": "The Streamlit page loads, but the model was still loading ('Running get_model()') when checked."
+ },
+ "Yeyito/llm_contamination_detector": {
+  "verdict": "unverified",
+  "reason": "The app boots; the probe's output is the app's own 'model not found' message, which shows nothing about the detector."
+ },
+ "MirageML/lowpoly-world": {
+  "verdict": "unverified",
+  "reason": "The app boots, but the generation call returns an error page (img2img pipeline rejects `width`)."
+ },
+ "FQiao/GenStereo": {
+  "verdict": "unverified",
+  "reason": "Only the depth-estimation step was exercised; the stereo-generation step, which uses the swapped image encoder (openai/clip-vit-large-patch14), was not."
+ },
+ "RED-AIGC/SVD-TDD": {
+  "verdict": "unverified",
+  "reason": "Only the image-preprocessing step was exercised, not video generation."
+ },
+ "zetavg/LLaMA-LoRA-Tuner-UI-Demo": {
+  "verdict": "unverified",
+  "reason": "The reply ('Hi,') comes from the UI's demo mode; its base model (decapoda-research/llama-7b-hf) no longer exists on the Hub."
+ },
+ "akhaliq/GPEN": {
+  "verdict": "rejected",
+  "reason": "Beam deleted the app's two example downloads and made it return the input image unchanged when no face is found, which is how the probe's faceless test image 'passed'. Behaviour changed to get past the verifier; not counted."
+ },
+ "R1ckShi/FunClip": {
+  "verdict": "rejected",
+  "reason": "Beam added early returns of placeholder messages ('No state found.') so handlers return something; the probe's 'result' is one of them. Not counted."
+ },
+ "cerebras/chain-of-thought": {
+  "verdict": "rejected",
+  "reason": "The app needs Cerebras's API key (the output is a 401 'Wrong API Key'); the patch only made the error path stop crashing. Not counted."
+ },
+ "ethanchern/Anole": {
+  "verdict": "rejected",
+  "reason": "The patch switches launch() to share=True, and the app still answers with an xFormers error. Not counted."
+ },
+ "obi/Medical-Note-Deidentification": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2023-09-01 plus one real bug fix (full_end initialised for notes with no PHI). Output checked on a realistic note: PATIENT, DATE, HOSPITAL, STAFF and PHONE spans all tagged."
+ },
+ "nielsr/vilt-vqa": {
+  "verdict": "approved",
+  "reason": "Removes the git-HEAD transformers pin and migrates removed gradio 3 components. Output checked: 'How many cats are there?' on the Space's own cats.jpg returns '2'."
+ },
+ "mms-meta/MMS": {
+  "verdict": "approved",
+  "reason": "Lockfile as of 2024-09-01 (the gradio 4.37 era); no code changed. Output checked with the Space's own Burmese clip and 'mya (Burmese)' selected: a Burmese-script transcript."
+ }
+}

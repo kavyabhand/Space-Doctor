@@ -1,0 +1,119 @@
+{
+ "census": {
+  "date": "2026-10-30",
+  "spaces": 10000,
+  "broken": 3513,
+  "broken_likes": 211237,
+  "stages": {
+   "RUNNING": 4854,
+   "CONFIG_ERROR": 213,
+   "PAUSED": 1233,
+   "RUNTIME_ERROR": 2755,
+   "BUILD_ERROR": 545,
+   "SLEEPING": 399,
+   "RUNNING_APP_STARTING": 1
+  }
+ },
+ "reproduction": {
+  "attempted": 239,
+  "still_broken": 223,
+  "same_exception_as_hf": 88,
+  "stages": {
+   "running": 14,
+   "build_error": 37,
+   "runtime_error": 186,
+   "boot_timeout": 2
+  }
+ },
+ "treatment": {
+  "treated": 222,
+  "gpu_cases": 18,
+  "tiers": {
+   "unfixable": 71,
+   "api": 53,
+   "failed": 58,
+   "functional": 34,
+   "rejected": 6
+  },
+  "declared_unfixable": 71,
+  "rejected_at_review": [
+   {
+    "space": "R1ckShi/FunClip",
+    "reason": "Beam added early returns of placeholder messages ('No state found.') so handlers return something; the probe's 'result' is one of them. Not counted."
+   },
+   {
+    "space": "akhaliq/GPEN",
+    "reason": "Beam deleted the app's two example downloads and made it return the input image unchanged when no face is found, which is how the probe's faceless test image 'passed'. Behaviour changed to get past the verifier; not counted."
+   },
+   {
+    "space": "cerebras/chain-of-thought",
+    "reason": "The app needs Cerebras's API key (the output is a 401 'Wrong API Key'); the patch only made the error path stop crashing. Not counted."
+   },
+   {
+    "space": "ethanchern/Anole",
+    "reason": "The patch switches launch() to share=True, and the app still answers with an xFormers error. Not counted."
+   },
+   {
+    "space": "m-ric/beam_search_visualizer",
+    "reason": "The patch replaced every <|endoftext|> in app.py with the junk string 'c\u00eda'. The app still boots and returns output, so the probe passed, but its logic for detecting finished sequences is now wrong. Beam apparently cannot write this special token literally. Caught at review; a guard for special-token text was added afterwards."
+   },
+   {
+    "space": "pritish/BookGPT",
+    "reason": "Beam removed the app's PDF-only upload restriction so that our probe's test file would pass, and the returned text is the app's own input-validation error. The app also needs a user's OpenAI key. Gaming the verifier; not counted."
+   }
+  ],
+  "reprobed": 16,
+  "guard_rejections": 5,
+  "likes_revived": 3425,
+  "fixed_at": {
+   "medium (attempt 1)": 18,
+   "high (attempt 3)": 6,
+   "medium (attempt 2)": 10
+  },
+  "beam_calls": 638,
+  "prompt_tokens": 17826200,
+  "cached_prompt_tokens": 7288320,
+  "completion_tokens": 1688843,
+  "median_beam_secs": 10.0,
+  "median_wall_secs": 785
+ },
+ "baseline": {
+  "name": "time-travel pinning (uv --exclude-newer <last commit>, Python 3.10 unless pinned)",
+  "compared": 204,
+  "beam_only": 28,
+  "baseline_only": 7,
+  "both": 2,
+  "neither": 167,
+  "baseline_tiers": {
+   "build_error": 71,
+   "runtime_error": 87,
+   "api": 29,
+   "boot_timeout": 8,
+   "functional": 9,
+   "harness_error": 1
+  }
+ },
+ "triage": {
+  "n_logs": 3393,
+  "coverage_round1": 0.597,
+  "coverage_reported": 0.897,
+  "coverage_specific": 0.672,
+  "catch_all_families": [
+   {
+    "name": "Generic unspecified space failure",
+    "regex": "Exit code:|Reason:|Space failed|Job failed|Build failed|Unexpected build error|application does not (seem|appear) to be initialized|Initialization step .* failed|Unexpected job error|Job timeout",
+    "matched": 765,
+    "matched_any": 943
+   }
+  ],
+  "families": 46,
+  "prompt_tokens": [
+   403063,
+   122343
+  ],
+  "secs": [
+   70.2,
+   33.5
+  ]
+ }
+}

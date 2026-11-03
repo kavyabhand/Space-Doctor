@@ -1,0 +1,7 @@
+.env
+*.pem
+__pycache__/
+.hosts
+final/
+release/
+.DS_Store
