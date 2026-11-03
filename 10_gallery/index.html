@@ -570,7 +570,7 @@ function cardHtml(c, i) {
 function thumbHtml(c) {
   const media = c.media || [];
   const img = media.find(x => /\.(png|jpe?g|webp|gif)$/i.test(x)), vid = media.find(x => /\.(mp4|webm)$/i.test(x)), aud = media.find(x => /\.(wav|mp3|flac|ogg)$/i.test(x));
-  if (vid) return `<video src="${esc(vid)}#t=0.5" muted playsinline preload="metadata" aria-hidden="true"></video><span class="kind">Video</span>`;
+  if (vid) return `<video src="${esc(vid)}" poster="${esc(vid)}.poster.png" muted playsinline preload="none" aria-hidden="true"></video><span class="kind">Video</span>`;
   if (img) return `<img src="${esc(img)}" alt="" loading="lazy"><span class="kind">${c.sdk === "streamlit" ? "Page" : "Image"}</span>`;
   if (aud) return `<svg class="wave" viewBox="0 0 120 40" aria-hidden="true"><path d="M0 20 H14 L18 8 L22 32 L26 4 L30 36 L34 12 L38 28 L42 20 H56 L60 10 L64 30 L68 16 L72 24 L76 20 H120" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="kind">Audio</span>`;
   const t = c.probe ? String(c.probe.output) : "";

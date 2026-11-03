@@ -26,6 +26,8 @@
 
 ---
 
+<p align="center"><img src="assets/results.png" width="100%" alt="Results: 3,513 of 10,000 Spaces broken; 34 revived and verified; 24 pull requests; Beam 30 vs no-model baseline 9" /></p>
+
 ## TL;DR
 
 | | |

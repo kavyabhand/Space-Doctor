@@ -1,7 +1,7 @@
 """Write the gallery's data files: data/summary.json, data/triage.json, data/cases.json, data/outputs/<space>/*.
 usage: export_gallery.py DATA_DIR OUT_DIR"""
 import sys, pathlib; _ROOT = pathlib.Path(__file__).resolve().parents[1]; sys.path[:0] = [str(p) for p in sorted(_ROOT.glob("[0-9][0-9]_*"))]  # chapters import each other
-import json, re, shutil, sys
+import json, re, shutil, subprocess, sys
 from pathlib import Path
 
 REDACT = [  # credential-shaped strings that appear inside third-party error logs (e.g. expired pre-signed URLs)
@@ -63,6 +63,9 @@ for d in sorted((D / "repro").iterdir()):
                 safe = f.name.replace(":", "_")
                 shutil.copy(f, dst / safe)
                 media.append(f"data/outputs/{d.name}/{safe}")
+                if f.suffix.lower() in (".mp4", ".webm") and shutil.which("ffmpeg"):  # poster frame for the tile
+                    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(dst / safe), "-frames:v", "1",
+                                    str(dst / (safe + ".poster.png"))], check=False)
     b = json.load(open(d / "baseline.json")) if (d / "baseline.json").exists() else None
     cases.append({
         "space": c["space"], "likes": c["likes"], "gpu": bool(c.get("gpu")), "status": status, "sdk": (rec.get("meta") or {}).get("sdk"),
