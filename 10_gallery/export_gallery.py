@@ -5,7 +5,7 @@ import json, re, shutil, subprocess, sys
 from pathlib import Path
 
 REDACT = [  # credential-shaped strings that appear inside third-party error logs (e.g. expired pre-signed URLs)
-    (re.compile(r"(X-Amz-(?:Credential|Signature|Security-Token)(?:=|%3D|%253D))[^&%\s\"']+(?:%2F[^&\s\"']*)?"), r"\1[REDACTED]"),
+    (re.compile(r"(X-Amz-(?:Credential|Signature|Security-Token)(?:=|%3D|%253D))[^&%\s\"'\\]+(?:%2F[^&\s\"'\\]*)?"), r"\1[REDACTED]"),
     (re.compile(r"(sign(?:ature)?=)eyJ[A-Za-z0-9._-]+"), r"\1[REDACTED]"),
     (re.compile(r"eyJhbGci" r"Oi[A-Za-z0-9._-]+"), "[REDACTED_JWT]"),
     (re.compile(r"hf_[A-Za-z0-9]{30,}"), "hf_[REDACTED]"),
@@ -24,7 +24,24 @@ D = Path(sys.argv[1] if len(sys.argv) > 1 else "/data")
 out = Path(sys.argv[2] if len(sys.argv) > 2 else "/data/gallery/data")
 out.mkdir(parents=True, exist_ok=True)
 shutil.rmtree(out / "outputs", ignore_errors=True)  # only current revivals' outputs, never stale ones
-json.dump(json.load(open(D / "summary.json")), open(out / "summary.json", "w"))
+def _efficiency():  # Beam's token efficiency, measured from every repair call's usage and the triage call
+    import statistics
+    rs, outs = [], []
+    for cf in (D / "repro").glob("*/case.json"):
+        cc = json.load(open(cf)); ks = cc.get("calls", [])
+        rs += [((k.get("usage") or {}).get("completion_tokens_details") or {}).get("reasoning_tokens") for k in ks]
+        if cc.get("tier") == "functional":
+            outs.append(sum((k.get("usage") or {}).get("completion_tokens", 0) for k in ks))
+    rs = [r for r in rs if r is not None]
+    tri = json.load(open(D / "triage.json")).get("usage", [{}]) if (D / "triage.json").exists() else [{}]
+    tri0 = tri[0] if isinstance(tri, list) and tri else (tri or {})
+    return {"median_reasoning_per_call": statistics.median(rs) if rs else None,
+            "median_output_per_revived": statistics.median(outs) if outs else None,
+            "triage_reasoning": ((tri0.get("completion_tokens_details") or {}).get("reasoning_tokens")),
+            "triage_input": tri0.get("prompt_tokens")}
+
+_S = json.load(open(D / "summary.json")); _S["efficiency"] = _efficiency()
+json.dump(_S, open(out / "summary.json", "w"))
 if (D / "triage.json").exists():
     t = json.load(open(D / "triage.json"))
     t.pop("assignment", None)  # the per-Space mapping lives in the dataset, not the page
@@ -36,6 +53,20 @@ PRS = json.load(open(_ROOT / "08_results" / "prs.json")) if (_ROOT / "08_results
 CODE = {"RUNTIME_ERROR": 2, "BUILD_ERROR": 2, "CONFIG_ERROR": 2, "PAUSED": 1, "SLEEPING": 1}
 cen = sorted(json.load(open(D / "census.json")), key=lambda r: -r["likes"])
 json.dump([[r["id"], r["likes"], CODE.get(r["stage"], 0)] for r in cen], open(out / "census_min.json", "w"), separators=(",", ":"))
+# Lookup for "Check a Space": every broken Space's public error and the root-cause family Beam's triage gave it.
+_tri = json.load(open(D / "triage.json")) if (D / "triage.json").exists() else {"families": [], "assignment": {}}
+_catch = {f["name"] for f in (json.load(open(D / "summary.json")).get("triage", {}).get("catch_all_families", []) if (D / "summary.json").exists() else [])}
+_fams = [f for f in _tri["families"] if f["name"] not in _catch]
+_fi = {f["name"]: i for i, f in enumerate(_fams)}
+def _exc(e):  # the decisive line of a log: its last exception, else its first line
+    lines = [l.strip() for l in e.splitlines() if l.strip()]
+    hits = [l for l in lines if re.match(r"^[\w.]*(Error|Exception|Exit)\b[^\n]*:", l) and not l.startswith("Exit code")]
+    return (hits[-1] if hits else (lines[0] if lines else ""))[:260]
+_lk = {"fam": [[f["name"], f.get("typical_fix", ""), bool(f.get("fixable_in_code"))] for f in _fams], "b": {}}
+for r in cen:
+    if CODE.get(r["stage"]) == 2:
+        _lk["b"][r["id"]] = [_fi.get(_tri["assignment"].get(r["id"]), -1), redact(_exc(r.get("err") or "")), r["stage"]]
+(out / "lookup.json").write_text(json.dumps(_lk, separators=(",", ":"), ensure_ascii=False))
 MEDIA = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".wav", ".mp3", ".flac", ".ogg", ".mp4", ".webm"}
 cases = []
 for d in sorted((D / "repro").iterdir()):

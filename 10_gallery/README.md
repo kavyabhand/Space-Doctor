@@ -8,6 +8,7 @@
 |---|---|
 | Hero | All 10,000 Spaces as a field of dots, ordered by likes; broken ones coral, revived ones cyan and pulsing |
 | Results | A grid of revived Spaces with live lifelines and output thumbnails; tap one for the error, diagnosis, patch and output |
+| Check a Space | Look up any of the 10,000 Spaces: its status, Hugging Face's error, Beam's root-cause family and typical fix, and our case if we treated it (`data/lookup.json`) |
 | Method | The five checks, a flow from census to outcome, and a terminal replay of real repairs |
 | Causes | Beam's triage as bubbles, and the 60% / 90% / 67% coverage story |
 | Control | Beam against the time-travel baseline |

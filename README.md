@@ -26,9 +26,7 @@
 
 ---
 
-<p align="center"><a href="https://huggingface.co/spaces/kavyabhand/space-doctor/resolve/main/assets/demo.mp4"><img src="assets/demo_poster.jpg" width="80%" alt="Watch the 80-second tour" /></a><br><sub>▶ Watch the 80-second captioned tour</sub></p>
-
-<p align="center"><img src="assets/results.png" width="100%" alt="Results: 3,513 of 10,000 Spaces broken; 34 revived and verified; 24 pull requests; Beam 30 vs no-model baseline 9" /></p>
+<p align="center"><a href="https://huggingface.co/spaces/kavyabhand/space-doctor/resolve/main/assets/demo.mp4"><img src="assets/demo_poster.jpg" width="80%" alt="Watch the film" /></a><br><sub>▶ Watch the 90-second film</sub></p>
 
 ## TL;DR
 
@@ -39,7 +37,7 @@
 | **Result** | **222 broken Spaces treated, 34 revived and verified**, every one reviewed by a person. **24 pull requests** opened on the original Spaces, including Stability AI's, Microsoft's and Meta's. |
 | **Against a no-model baseline** | On the 204 patients run both ways, **Beam revived 30, the baseline 9**. |
 | **Honesty** | Beam said "unfixable" 71 times instead of faking it. **6 patches passed every automatic check and were still rejected at review** for gaming the verifier. We report all of it. |
-| **Beam usage** | 1 long-context triage call over 3,393 error logs (403K tokens), then 638 repair calls. All on Reflection's free daily tier. |
+| **Beam usage** | 1 long-context triage call over 3,393 error logs (403K tokens, only 9,339 reasoning tokens), then 638 repair calls at a median of 1,374 reasoning tokens each, about 3,090 output tokens per revived Space (49,672 per revival counting every failed Space too). All on Reflection's free daily tier. |
 
 ---
 

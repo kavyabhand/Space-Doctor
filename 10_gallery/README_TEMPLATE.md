@@ -45,7 +45,7 @@ tags:
 </p>
 
 <p align="center"><video src="https://huggingface.co/spaces/kavyabhand/space-doctor/resolve/main/assets/demo.mp4" poster="https://huggingface.co/spaces/kavyabhand/space-doctor/resolve/main/assets/demo_poster.jpg" controls muted playsinline width="100%"></video></p>
-<p align="center"><sub>80-second captioned tour of the gallery</sub></p>
+<p align="center"><sub>The film: 90 seconds, narrated</sub></p>
 
 ---
 
@@ -55,7 +55,7 @@ tags:
 |---|---|
 | **Live gallery** | This Space: every revival, its patch, and what the revived app returned |
 | **Dataset** | [${hf_user}/spacerot](https://huggingface.co/datasets/${hf_user}/spacerot): census of 10,000 Spaces, ${treated} case files, all Beam traces, the pipeline code |
-| **Demo video** | [80-second captioned tour](https://huggingface.co/spaces/kavyabhand/space-doctor/resolve/main/assets/demo.mp4) |
+| **Demo video** | [90-second narrated film](https://huggingface.co/spaces/kavyabhand/space-doctor/resolve/main/assets/demo.mp4) |
 | **Code** | [github.com/kavyabhand/Space-Doctor](https://github.com/kavyabhand/Space-Doctor), told as twelve chapters |
 | **Model** | [`reflection/Beam-1.0-501B-A23B`](https://huggingface.co/reflection/Beam-1.0-501B-A23B) via Reflection's API, `reasoning_effort` medium → high |
 | **What Beam does** | Reads 3,393 error logs in one call to find why Spaces die; reads a whole broken Space to write its repair; decides when a Space can't honestly be fixed |
@@ -142,6 +142,7 @@ ${prs_table}
 | **Repair strategy** | Chooses per Space: a minimal code edit that keeps it on today's libraries, a **dated lockfile** (`uv pip compile --exclude-newer <date Beam picks>`), or both | Judgement, not a rule: ${lock_used} of ${revived} revivals used a lockfile |
 | **Tool loop** | Asks for files it wasn't shown (`need_files`); gets patch and lock errors back instantly, before any rebuild | Agentic repair with cheap checks before expensive ones |
 | **Escalation** | `reasoning_effort` medium; high only after a failed rebuild, with the new logs | ${fixed_at} |
+| **Token efficiency** | A median of **${median_reasoning} reasoning tokens per repair call** and ${out_per_revived_median} output tokens to revive a Space (median, every attempt counted). The whole triage took ${triage_reasoning} reasoning tokens over ${triage_tokens} tokens of logs | Beam's headline strength, measured on real repairs |
 | **Abstention** | May answer `"verdict": "unfixable"`, and did ${unfixable} times | An honest "no" is worth more than a fake fix; we checked every one by hand |
 
 ---
@@ -196,6 +197,8 @@ ${empty_line}
 | Beam calls (triage + repair) | ${calls} |
 | Input tokens | ${prompt_tokens} (${cached_pct} served from Reflection's prompt cache) |
 | Output tokens | ${completion_tokens} (${out_per_revival} per revival, failures included) |
+| Reasoning tokens per repair call | ${median_reasoning} (median) |
+| Output tokens to revive one Space | ${out_per_revived_median} (median, every attempt counted) |
 | Median Beam call | ${median_call}s |
 | Median end-to-end per Space | ${median_wall} min, almost all of it Docker builds |
 

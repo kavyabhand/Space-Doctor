@@ -64,7 +64,12 @@ if cmp_n:
 else:
     note = "_Baseline comparison pending._"
 
+_G = Path(__file__).parent / "data" / "summary.json"
+_E = (json.load(open(_G)).get("efficiency") or {}) if _G.exists() else {}
+_n = lambda v: fmt(round(v)) if v is not None else "-"
 vals = dict(
+    median_reasoning=_n(_E.get("median_reasoning_per_call")), out_per_revived_median=_n(_E.get("median_output_per_revived")),
+    triage_reasoning=_n(_E.get("triage_reasoning")),
     authors=a.authors, hf_user=a.hf_user,
     video_url=a.video or "#", video_md=f"[Watch]({a.video})" if a.video else "In the Space header",
     census_date=c["date"], spaces=fmt(c["spaces"]), broken=fmt(c["broken"]), broken_pct=pct(c["broken"] / c["spaces"]),

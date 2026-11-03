@@ -79,6 +79,34 @@
   .btn:hover { border-color: var(--fg-3); }
   .btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 
+
+  /* Check a Space */
+  .ck { position: relative; }
+  .ck input { width: 100%; font: 400 17px var(--mono); padding: 15px 18px 15px 46px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); outline: none; }
+  .ck input:focus { border-color: var(--beam); box-shadow: 0 0 0 4px var(--beam-soft); }
+  .ck svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--fg-3); pointer-events: none; }
+  .ck-sug { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; z-index: 5; box-shadow: 0 20px 40px -20px rgba(0,0,0,.35); }
+  .ck-sug button { display: flex; width: 100%; justify-content: space-between; gap: 12px; padding: 10px 16px; border: 0; background: none; color: var(--fg); font: 400 14px var(--mono); text-align: left; cursor: pointer; }
+  .ck-sug button:hover, .ck-sug button[aria-selected="true"] { background: var(--sunk); }
+  .ck-sug .m { color: var(--fg-3); white-space: nowrap; }
+  .ck-try { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; color: var(--fg-3); }
+  .ck-try button { font: 400 13px var(--mono); border: 1px solid var(--line); background: none; color: var(--fg-2); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+  .ck-try button:hover { border-color: var(--fg-3); color: var(--fg); }
+  .ck-out { margin-top: 22px; }
+  .ck-card { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; }
+  .ck-card > div { padding: 16px 20px; }
+  .ck-card > div + div { border-top: 1px solid var(--line); }
+  .ck-h { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .ck-h a { font-weight: 600; color: var(--fg); text-decoration: none; word-break: break-all; }
+  .ck-err { background: var(--rose-soft); }
+  .ck-err pre { margin: 6px 0 0; font: 13px/1.5 var(--mono); color: var(--rose); white-space: pre-wrap; word-break: break-word; }
+  .ck-card p { margin: 6px 0 0; color: var(--fg-2); font-size: 15px; line-height: 1.6; }
+  .ck-card .label + p { margin-top: 6px; }
+  .ck-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  .ck-links a, .ck-links button { font: 500 13px var(--sans); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; text-decoration: none; background: none; cursor: pointer; }
+  .ck-links a:hover, .ck-links button:hover { border-color: var(--fg-3); }
+  .ck-cli { margin-top: 10px; font: 13px/1.5 var(--mono); background: var(--sunk); border-radius: 10px; padding: 10px 12px; overflow-x: auto; white-space: nowrap; color: var(--fg-2); }
+
   /* Figure 1: the field */
   figure { margin: 0; }
   .field-wrap { position: relative; }
@@ -262,7 +290,7 @@
       Space Doctor
     </div>
     <nav aria-label="Sections">
-      <a href="#revivals">Results</a><a href="#method">Method</a><a href="#triage">Causes</a><a href="#findings">Findings</a><a href="#cases">Case files</a>
+      <a href="#revivals">Results</a><a href="#check">Check a Space</a><a href="#method">Method</a><a href="#triage">Causes</a><a href="#findings">Findings</a><a href="#cases">Case files</a>
     </nav>
   </header>
 
@@ -273,7 +301,8 @@
     <div class="byline">By <a href="https://huggingface.co/kavyabhand" target="_blank" rel="noopener">Kavya Bhand</a> and <a href="https://huggingface.co/aadi-joshi" target="_blank" rel="noopener">Aadi Joshi</a></div>
     <div class="actions">
       <a class="btn primary" href="#revivals">See the revivals</a>
-      <a class="btn" href="assets/demo.mp4" target="_blank" rel="noopener">Watch the 80s tour ▸</a>
+      <a class="btn" href="#check">Check your Space</a>
+      <a class="btn" href="assets/demo.mp4" target="_blank" rel="noopener">Watch the film ▸</a>
       <a class="btn" href="https://huggingface.co/datasets/kavyabhand/spacerot" target="_blank" rel="noopener">Dataset ↗</a>
       <a class="btn" href="https://huggingface.co/reflection/Beam-1.0-501B-A23B" target="_blank" rel="noopener">Model ↗</a>
       <a class="btn" href="https://github.com/kavyabhand/Space-Doctor" target="_blank" rel="noopener">Code ↗</a>
@@ -302,6 +331,23 @@
     <div class="more"><button class="btn" type="button" id="rev-more" hidden></button></div>
     <figcaption><span class="label">Figure 2</span><span id="cap2">Revived Spaces, by likes. Tap any one to see the error, the patch, Beam's diagnosis and the output. Each patch for a Space with 30 or more likes is open as a pull request on the original Space.</span></figcaption>
     <dialog class="case-dlg" id="dlg" aria-label="Revived Space details"><div class="card" id="dlg-card"></div></dialog>
+  </div>
+</section>
+
+<section id="check">
+  <div class="read sec-head">
+    <div class="label">Try it</div>
+    <h2>Check any Space</h2>
+    <p class="prose">Type one of the 10,000 most-liked Spaces. See whether it ran when we checked, the error Hugging Face showed, the root cause Beam's triage found, and what happened if we treated it.</p>
+  </div>
+  <div class="read">
+    <div class="ck">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="ck-q" type="search" placeholder="owner/space" autocomplete="off" spellcheck="false" aria-label="Space to check, as owner/space" aria-controls="ck-sug">
+      <div class="ck-sug" id="ck-sug" role="listbox" hidden></div>
+    </div>
+    <div class="ck-try" id="ck-try">Try:</div>
+    <div class="ck-out" id="ck-out" aria-live="polite"></div>
   </div>
 </section>
 
@@ -442,7 +488,7 @@ Promise.all([load("data/summary.json"), load("data/triage.json"), load("data/cas
     C = C || [];
     const revived = C.filter(c => c.status === "functional").sort((a, b) => b.likes - a.likes);
     field(census || [], C);
-    figures(S, revived); revivals(revived); flow(S, C); replay(revived); triage(T, S); baseline(S); findings(S, C); ledger(S); caseList(C);
+    figures(S, revived); revivals(revived); flow(S, C); replay(revived); triage(T, S); baseline(S); findings(S, C); ledger(S); caseList(C); check(census || [], C, S);
   });
 
 /* Figure 1: one dot per Space, ordered by likes. Revived Spaces are drawn last, in cyan, with a slow pulse. */
@@ -598,9 +644,79 @@ function revivals(list) {
     card.innerHTML = `<div class="dlg-x"><button type="button" data-close>Close ✕</button></div>` + cardHtml(list[+t.dataset.i], +t.dataset.i);
     if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
   });
+  window.__openRevived = space => {
+    const i = list.findIndex(c => c.space === space); if (i < 0) return;
+    card.innerHTML = `<div class="dlg-x"><button type="button" data-close>Close ✕</button></div>` + cardHtml(list[i], i);
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+  };
   dlg.addEventListener("click", e => {
     if (e.target === dlg || e.target.closest("[data-close]")) { dlg.close ? dlg.close() : dlg.removeAttribute("open"); }
   });
+}
+
+/* Check a Space: census status, Hugging Face's error, Beam's triage family, and our case if we treated it. */
+function check(census, C, S) {
+  const q = document.getElementById("ck-q"), sug = document.getElementById("ck-sug"), out = document.getElementById("ck-out"), tryEl = document.getElementById("ck-try");
+  if (!q) return;
+  const byId = new Map(census.map(r => [r[0].toLowerCase(), r])), cases = new Map(C.map(c => [c.space.toLowerCase(), c]));
+  const date = (S && S.census && S.census.date) || "our census";
+  let LK = null, lkP = null, sel = -1, items = [];
+  const lookup = () => lkP || (lkP = load("data/lookup.json").then(d => (LK = d || { fam: [], b: {} })));
+  ["stabilityai/stablelm-2-1_6b-zephyr", "microsoft/TRELLIS", "fffiloni/YuE", "enzostvs/deepsite"].forEach(s => {
+    if (!byId.has(s.toLowerCase())) return;
+    const b = document.createElement("button"); b.type = "button"; b.textContent = s; b.onclick = () => { q.value = s; show(s); };
+    tryEl.appendChild(b);
+  });
+  const STATE = { 0: ["live", "Running"], 1: ["grey", "Paused or sleeping"], 2: ["dead", "Broken"] };
+  const suggest = () => {
+    const v = q.value.trim().toLowerCase(); sel = -1;
+    if (v.length < 2) { sug.hidden = true; return; }
+    items = []; for (const r of census) { if (r[0].toLowerCase().includes(v)) { items.push(r); if (items.length === 7) break; } }
+    if (!items.length) { sug.hidden = true; return; }
+    sug.innerHTML = items.map((r, i) => `<button type="button" role="option" data-i="${i}"><span>${esc(r[0])}</span><span class="m">♥ ${fmt(r[1])} · ${STATE[r[2]][1]}</span></button>`).join("");
+    sug.hidden = false;
+  };
+  const show = async id => {
+    sug.hidden = true;
+    const r = byId.get(id.trim().toLowerCase().replace(/^https?:\/\/huggingface\.co\/spaces\//, "").replace(/\/+$/, ""));
+    if (!r) { out.innerHTML = `<div class="ck-card"><div><p style="margin:0">That Space isn't among the 10,000 most-liked Spaces we checked on ${esc(date)}. Use the format <code>owner/space</code>.</p></div></div>`; return; }
+    const [name, likes, code] = r, url = `https://huggingface.co/spaces/${name}`;
+    const head = `<div class="ck-h"><a href="${url}" target="_blank" rel="noopener">${esc(name)} ↗</a><span class="chip ${STATE[code][0]}">${STATE[code][1]}</span></div><div class="card-sub" style="margin-top:6px">♥ ${fmt(likes)} · checked ${esc(date)}</div>`;
+    if (code !== 2) {
+      out.innerHTML = `<div class="ck-card"><div>${head}<p>${code === 0 ? "This Space was running when we checked. Nothing to fix." : "Paused or asleep by its owner, not an error. It wakes when someone visits."}</p></div></div>`; return;
+    }
+    out.innerHTML = `<div class="ck-card"><div>${head}</div><div><p style="margin:0">Loading the diagnosis…</p></div></div>`;
+    await lookup();
+    const b = LK.b[name] || [-1, "", ""], fam = LK.fam[b[0]], c = cases.get(name.toLowerCase());
+    const err = b[1] ? `<div class="ck-err"><span class="label">On Hugging Face · ${esc((b[2] || "").replace("_", " ").toLowerCase())}</span><pre>${esc(b[1])}</pre></div>` : "";
+    const tri = fam ? `<div><span class="label">Beam's triage</span><p><b style="color:var(--fg)">${esc(fam[0])}</b>${fam[2] ? " · fixable in code" : " · needs the owner or the platform"}</p>${fam[1] ? `<p>Typical fix: ${md(fam[1])}</p>` : ""}</div>`
+                    : `<div><span class="label">Beam's triage</span><p>No specific cause matched this error. It needs a closer look at the repo.</p></div>`;
+    let tail;
+    const caseLink = c ? `<a href="#case-${esc(c.space.replace("/", "__"))}">Full case file</a>` : "";
+    if (c && c.status === "functional") {
+      tail = `<div><span class="label" style="color:var(--beam)">Revived by Beam · verified</span><p>${md(c.diagnosis || "")}</p><div class="ck-links"><button type="button" data-open="${esc(c.space)}">See the repair and output</button>${c.pr ? `<a href="${esc(c.pr)}" target="_blank" rel="noopener">Pull request ↗</a>` : ""}${caseLink}</div></div>`;
+    } else if (c) {
+      const why = { api: "Beam's patch makes it boot, but the output didn't show the app working, so we don't count it.",
+                    rejected: "Beam's patch passed our automatic checks but a person rejected it: " + ((c.review && c.review.reason) || ""),
+                    unfixable: "Beam judged it can't be fixed without the owner: " + (c.diagnosis || ""),
+                    failed: "Beam tried and it didn't come back. Diagnosis: " + (c.diagnosis || "") }[c.status] || "";
+      tail = `<div><span class="label">We treated it · ${esc(STATUS[c.status][1])}</span><p>${md(why)}</p><div class="ck-links">${caseLink}</div></div>`;
+    } else {
+      tail = `<div><span class="label">Not in our treated set</span><p>We rebuilt and treated the highest-impact code-level failures. Run the same loop on this one yourself:</p><div class="ck-cli">python 11_tools_for_owners/cli.py ${esc(name)}</div><div class="ck-links"><a href="https://github.com/kavyabhand/Space-Doctor/tree/main/11_tools_for_owners" target="_blank" rel="noopener">How to run it ↗</a></div></div>`;
+    }
+    out.innerHTML = `<div class="ck-card"><div>${head}</div>${err}${tri}${tail}</div>`;
+  };
+  q.addEventListener("focus", lookup, { once: true });
+  q.addEventListener("input", suggest);
+  q.addEventListener("keydown", e => {
+    const bs = [...sug.querySelectorAll("button")];
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { if (!bs.length) return; e.preventDefault(); sel = (sel + (e.key === "ArrowDown" ? 1 : -1) + bs.length) % bs.length; bs.forEach((b, i) => b.setAttribute("aria-selected", i === sel)); }
+    else if (e.key === "Enter") { e.preventDefault(); const exact = byId.has(q.value.trim().toLowerCase()); const v = sel >= 0 && items[sel] ? items[sel][0] : (!exact && !sug.hidden && items[0] ? items[0][0] : q.value); q.value = v; show(v); }
+    else if (e.key === "Escape") sug.hidden = true;
+  });
+  sug.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const v = items[+b.dataset.i][0]; q.value = v; show(v); });
+  document.addEventListener("click", e => { if (!e.target.closest(".ck")) sug.hidden = true; });
+  out.addEventListener("click", e => { const b = e.target.closest("[data-open]"); if (b && window.__openRevived) window.__openRevived(b.dataset.open); });
 }
 
 /* Figure 3: flow ribbons from census to outcome (square-root widths). */
@@ -725,6 +841,9 @@ function ledger(S) {
     ["Input tokens", `${pct(t.cached_prompt_tokens, t.prompt_tokens)} of repair input served from Reflection's prompt cache`, fmt(t.prompt_tokens + triIn)],
     ["Output tokens", "reasoning included", fmt(t.completion_tokens)],
     ["Output tokens per revival", "every call counted, failures included", rev ? fmt(Math.round(t.completion_tokens / rev)) : "–"],
+    ["Reasoning tokens per repair call", "median; Beam thinks briefly, then answers", (S.efficiency || {}).median_reasoning_per_call != null ? fmt(Math.round(S.efficiency.median_reasoning_per_call)) : "–"],
+    ["Output tokens to revive one Space", "median, every attempt on that Space counted", (S.efficiency || {}).median_output_per_revived != null ? fmt(Math.round(S.efficiency.median_output_per_revived)) : "–"],
+    ["Reasoning tokens for the whole triage", (S.efficiency || {}).triage_input ? `to read ${fmt(S.efficiency.triage_input)} tokens of error logs` : "", (S.efficiency || {}).triage_reasoning != null ? fmt(S.efficiency.triage_reasoning) : "–"],
     ["Median Beam call", "", t.median_beam_secs != null ? Math.round(t.median_beam_secs) + " s" : "–"],
     ["Median time per Space", "end to end; almost all of it is Docker builds", t.median_wall_secs ? Math.round(t.median_wall_secs / 60) + " min" : "–"],
     ["Revivals by reasoning effort", fixedAt, fmt(rev)],
