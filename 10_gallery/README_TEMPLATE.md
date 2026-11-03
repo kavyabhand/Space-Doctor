@@ -44,6 +44,9 @@ tags:
   <a href="https://huggingface.co/reflection/Beam-1.0-501B-A23B/discussions/5"><img src="https://img.shields.io/badge/Build_with_Beam-Reflection_×_Hugging_Face-111111?style=flat-square" alt="Build with Beam" /></a>
 </p>
 
+<p align="center"><video src="https://huggingface.co/spaces/kavyabhand/space-doctor/resolve/main/assets/demo.mp4" poster="https://huggingface.co/spaces/kavyabhand/space-doctor/resolve/main/assets/demo_poster.jpg" controls muted playsinline width="100%"></video></p>
+<p align="center"><sub>80-second captioned tour of the gallery</sub></p>
+
 ---
 
 ## Submission Snapshot
@@ -52,6 +55,7 @@ tags:
 |---|---|
 | **Live gallery** | This Space: every revival, its patch, and what the revived app returned |
 | **Dataset** | [${hf_user}/spacerot](https://huggingface.co/datasets/${hf_user}/spacerot): census of 10,000 Spaces, ${treated} case files, all Beam traces, the pipeline code |
+| **Demo video** | [80-second captioned tour](https://huggingface.co/spaces/kavyabhand/space-doctor/resolve/main/assets/demo.mp4) |
 | **Code** | [github.com/kavyabhand/Space-Doctor](https://github.com/kavyabhand/Space-Doctor), told as twelve chapters |
 | **Model** | [`reflection/Beam-1.0-501B-A23B`](https://huggingface.co/reflection/Beam-1.0-501B-A23B) via Reflection's API, `reasoning_effort` medium → high |
 | **What Beam does** | Reads 3,393 error logs in one call to find why Spaces die; reads a whole broken Space to write its repair; decides when a Space can't honestly be fixed |

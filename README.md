@@ -26,6 +26,8 @@
 
 ---
 
+<p align="center"><a href="https://huggingface.co/spaces/kavyabhand/space-doctor/resolve/main/assets/demo.mp4"><img src="assets/demo_poster.jpg" width="80%" alt="Watch the 80-second tour" /></a><br><sub>▶ Watch the 80-second captioned tour</sub></p>
+
 <p align="center"><img src="assets/results.png" width="100%" alt="Results: 3,513 of 10,000 Spaces broken; 34 revived and verified; 24 pull requests; Beam 30 vs no-model baseline 9" /></p>
 
 ## TL;DR
